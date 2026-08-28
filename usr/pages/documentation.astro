@@ -4,6 +4,7 @@ import { siteMetadata } from '../user.config.mjs';
 import ChindTopNav from '../components/chind/ChindTopNav.astro';
 import DocumentationFigure from '../components/documentation/DocumentationFigure.astro';
 import '../components/documentation/documentation.css';
+import { withBase } from '../components/chind/paths';
 
 const dictionaryPageCallouts = [
   { number: 1, title: 'Page navigation', href: '#dict-page-1', anchorLeft: 49, anchorTop: 4, boxLeft: 80, boxTop: 8, boxWidth: '11rem' },
@@ -90,7 +91,7 @@ const characterBottomCallouts = [
       description="Interface guide and reading manual for the CHIND digital edition."
       siteMetadata={siteMetadata}
     />
-    <link rel="icon" type="image/png" href="/images/favicon.png" />
+    <link rel="icon" type="image/png" href={withBase('/images/favicon.png')} />
   </head>
   <body>
     <ChindTopNav />
@@ -234,7 +235,7 @@ const characterBottomCallouts = [
               </p>
 
               <DocumentationFigure
-                src="/images/chind/documentation/dictionary-page.png"
+                src={withBase('/images/chind/documentation/dictionary-page.png')}
                 alt="Annotated example of the dictionary page layout"
                 caption="Annotated example of the page-level dictionary browser. Click a numbered label to jump to the related explanation below."
                 callouts={dictionaryPageCallouts}
@@ -284,7 +285,7 @@ const characterBottomCallouts = [
               </p>
 
               <DocumentationFigure
-                src="/images/chind/documentation/dictionary-row.png"
+                src={withBase('/images/chind/documentation/dictionary-row.png')}
                 alt="Annotated example of a single dictionary row"
                 caption="A single row can contain the main reading, alternative readings, definitions, glosses and cross-references."
                 callouts={dictionaryRowCallouts}
@@ -338,7 +339,7 @@ const characterBottomCallouts = [
               <h3>General layout</h3>
               <p>The overview figure highlights the main navigational logic of the character index.</p>
               <DocumentationFigure
-                src="/images/chind/documentation/characters-overview.png"
+                src={withBase('/images/chind/documentation/characters-overview.png')}
                 alt="Annotated example of the general character index layout"
                 caption="The character index is organised around a radical × stroke matrix, supplemented by filtering controls and a selected-character sidebar."
                 callouts={charactersOverviewCallouts}
@@ -376,7 +377,7 @@ const characterBottomCallouts = [
               <h3>Detail of the results table</h3>
               <p>The table translates a selected radical × stroke cell into a browsable list of characters.</p>
               <DocumentationFigure
-                src="/images/chind/documentation/characters-table.png"
+                src={withBase('/images/chind/documentation/characters-table.png')}
                 alt="Annotated example of the selected-cell results table"
                 caption="Each row in the results table opens a path toward either the dictionary browser or the full character record."
                 callouts={charactersTableCallouts}
@@ -413,7 +414,7 @@ const characterBottomCallouts = [
               <h3>Detail of the analytics bar</h3>
               <p>The lower analytics area condenses the most useful aggregate views for the current filtered subset.</p>
               <DocumentationFigure
-                src="/images/chind/documentation/characters-analytics.png"
+                src={withBase('/images/chind/documentation/characters-analytics.png')}
                 alt="Annotated example of the lower analytics charts"
                 caption="These charts react to the active filters and help the reader understand the distributional profile of the current subset."
                 callouts={charactersAnalyticsCallouts}
@@ -448,7 +449,7 @@ const characterBottomCallouts = [
               <h3>Upper section</h3>
               <p>The upper part of the page combines navigation, summary data, definitions, and the graph of lexical relations.</p>
               <DocumentationFigure
-                src="/images/chind/documentation/character-detail-top.png"
+                src={withBase('/images/chind/documentation/character-detail-top.png')}
                 alt="Annotated example of the upper part of a character record"
                 caption="The upper section is designed for orientation: it identifies the character and immediately exposes its main readings, relations and loci."
                 callouts={characterTopCallouts}
@@ -485,7 +486,7 @@ const characterBottomCallouts = [
               <h3>Lower section</h3>
               <p>The lower half of the page concentrates the denser supporting material: compounds, graphic history, documentary loci, and notes.</p>
               <DocumentationFigure
-                src="/images/chind/documentation/character-detail-bottom.png"
+                src={withBase('/images/chind/documentation/character-detail-bottom.png')}
                 alt="Annotated example of the lower part of a character record"
                 caption="The lower section stores the most specialised material and makes it traceable back to the documentary evidence."
                 callouts={characterBottomCallouts}

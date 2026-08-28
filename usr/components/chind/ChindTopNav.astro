@@ -1,21 +1,23 @@
 ---
-const pathname = Astro.url.pathname.replace(/\/+$/, '') || '/';
+import { withBase, withoutBase } from './paths';
+
+const pathname = withoutBase(Astro.url.pathname).replace(/\/+$/, '') || '/';
 const isActive = (href: string) => {
   if (href === '/') return pathname === '/';
   return pathname === href || pathname.startsWith(`${href}/`);
 };
 
 const items = [
-  { href: '/', label: 'HOME' },
-  { href: '/documentation', label: 'DOCUMENTATION' },
-  { href: '/characters', label: 'INDEX' },
-  { href: '/text-comparison', label: 'COMPARE' },
-  { href: '/dictionary', label: 'DICTIONARY' },
-  { href: '/credits', label: 'CREDITS' },
-];
+  { route: '/', label: 'HOME' },
+  { route: '/documentation', label: 'DOCUMENTATION' },
+  { route: '/characters', label: 'INDEX' },
+  { route: '/text-comparison', label: 'COMPARE' },
+  { route: '/dictionary', label: 'DICTIONARY' },
+  { route: '/credits', label: 'CREDITS' },
+].map(item => ({ ...item, href: withBase(item.route) }));
 ---
 <header class="chind-global-nav">
-  <a class="chind-global-brand" href="/" aria-label="CHIND home">
+  <a class="chind-global-brand" href={withBase('/')} aria-label="CHIND home">
     <span class="chind-global-seal" aria-hidden="true"><i>漢</i><i>拉</i><i>字</i><i>典</i></span>
     <span class="chind-global-brand-copy">
       <strong>Dictionarium Sinico–Latinum</strong>
@@ -27,8 +29,8 @@ const items = [
     {items.map(item => (
       <a
         href={item.href}
-        class:list={{ active: isActive(item.href) }}
-        aria-current={isActive(item.href) ? 'page' : undefined}
+        class:list={{ active: isActive(item.route) }}
+        aria-current={isActive(item.route) ? 'page' : undefined}
       >
         {item.label}
       </a>

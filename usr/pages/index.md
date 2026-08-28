@@ -10,12 +10,12 @@ description: "Digital edition and research environment for Basilio Brollo’s Di
     <h1>CHIND <span>chindictionrary</span></h1>
     <p class="ch-home-lead">A digital environment for browsing, querying, and studying Basilio Brollo’s <em>Dictionarium sinico-latinum</em>: a research laboratory for missionary lexicography, the history of the Chinese lexicon, and the transcultural transmission of knowledge.</p>
     <div class="ch-home-actions">
-      <a class="ch-home-button primary" href="/dictionary">Browse the dictionary</a>
+      <a class="ch-home-button primary" href="dictionary">Browse the dictionary</a>
       <a class="ch-home-button secondary" href="#project">Explore the project</a>
     </div>
   </div>
   <div class="ch-home-logo-wrap" aria-hidden="true">
-    <img src="/images/chind/home/logo_chind.png" alt="" />
+    <img src="images/chind/home/logo_chind.png" alt="" />
   </div>
 </section>
 
@@ -44,7 +44,7 @@ description: "Digital edition and research environment for Basilio Brollo’s Di
     <span class="ch-home-section-number">02 · The author</span>
     <div class="ch-home-profile">
       <figure class="ch-home-figure">
-        <img src="/images/chind/home/brollo_official.webp" alt="Portrait of Basilio Brollo" />
+        <img src="images/chind/home/brollo_official.webp" alt="Portrait of Basilio Brollo" />
         <figcaption>Basilio Brollo (1648–1704)</figcaption>
       </figure>
       <div>

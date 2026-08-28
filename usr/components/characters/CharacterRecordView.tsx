@@ -8,11 +8,14 @@ import type {
   RecordReading,
 } from './recordTypes';
 import './character-record.css';
+import { withBase } from '../chind/paths';
 
 const recordCache = new Map<string, Promise<CharacterRecordDetailPayload>>();
 let searchIndexPromise: Promise<any> | null = null;
 
 type RelationTab = 'all' | 'synonyms' | 'antonyms' | 'variants' | 'compounds';
+type ReadingDefinition = RecordReading['definitions'][number];
+type ReadingRow = { reading: RecordReading; definition: ReadingDefinition | null };
 type NetworkItem =
   | { key: string; kind: 'lexical'; label: string; sub: string; characterId: string; relation: RecordLexicalRelation; category: string }
   | { key: string; kind: 'variant'; label: string; sub: string; characterId: string; variant: RecordGraphicVariant; category: string }
@@ -27,7 +30,7 @@ function readJson<T>(url: string): Promise<T> {
 }
 
 function loadRecord(id: string): Promise<CharacterRecordDetailPayload> {
-  if (!recordCache.has(id)) recordCache.set(id, readJson<CharacterRecordDetailPayload>(`/data/character-record/${encodeURIComponent(id)}.json`));
+  if (!recordCache.has(id)) recordCache.set(id, readJson<CharacterRecordDetailPayload>(withBase(`/data/character-record/${encodeURIComponent(id)}.json`)));
   return recordCache.get(id)!;
 }
 
@@ -53,7 +56,7 @@ function locusLabel(locus: RecordLocus): string {
 function dictionaryHref(locus: RecordLocus): string | null {
   if (locus.page == null) return null;
   const line = locus.line == null ? '' : `&line=${encodeURIComponent(String(locus.line))}`;
-  return `/dictionary?page=${encodeURIComponent(String(locus.page))}${line}`;
+  return withBase(`/dictionary?page=${encodeURIComponent(String(locus.page))}${line}`);
 }
 
 function Glyph({ glyph, link, className = '' }: { glyph: string; link?: string | null; className?: string }) {
@@ -174,7 +177,7 @@ function RelationMap({
           const x = cx + Math.cos(angle) * radius;
           const y = cy + Math.sin(angle) * radius;
           const openTarget = () => {
-            if (item.characterId) window.location.href = `/characters/view?id=${encodeURIComponent(item.characterId)}`;
+            if (item.characterId) window.location.href = withBase(`/characters/view?id=${encodeURIComponent(item.characterId)}`);
             else onSelect(item);
           };
           return <g key={item.key} className={`cr-node cr-node-${item.category} ${selectedKey === item.key ? 'selected' : ''}`} role="button" tabIndex={0} aria-label={`${item.label} ${item.sub}`} onClick={openTarget} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') openTarget(); }}>
@@ -264,7 +267,7 @@ export default function CharacterRecordView() {
     );
   }, [data, selectedReadingId, selectedSourceRadical, relationEvidenceOccIds]);
 
-  if (error) return <div className="cr-shell"><main className="cr-error"><a href="/characters">← Index</a><h1>Character record unavailable</h1><p>{error}</p></main></div>;
+  if (error) return <div className="cr-shell"><main className="cr-error"><a href={withBase('/characters')}>← Index</a><h1>Character record unavailable</h1><p>{error}</p></main></div>;
   if (!data) return <div className="cr-loading"><span className="cr-spinner" /><strong>Loading character record…</strong></div>;
 
   const historicalReadings = unique(data.readings.map(r => r.historical));
@@ -313,12 +316,12 @@ export default function CharacterRecordView() {
       const index = await searchIndexPromise;
       const normalized = q.replace(/\s+/g,'').toLowerCase();
       const found = (index?.data ?? []).find((row: any) => [row.rawCharacter,row.displayCharacter,row.simplified].filter(Boolean).some((v: any) => String(v).replace(/\s+/g,'').toLowerCase() === normalized));
-      if (found?.id) window.location.href = `/characters/view?id=${encodeURIComponent(String(found.id))}`;
-      else window.location.href = '/characters';
-    } catch { window.location.href = '/characters'; }
+      if (found?.id) window.location.href = withBase(`/characters/view?id=${encodeURIComponent(String(found.id))}`);
+      else window.location.href = withBase('/characters');
+    } catch { window.location.href = withBase('/characters'); }
   };
 
-  const readingRows = data.readings.flatMap(reading => reading.definitions.length
+  const readingRows = data.readings.flatMap<ReadingRow>(reading => reading.definitions.length
     ? reading.definitions.map(definition => ({ reading, definition }))
     : [{ reading, definition: null }]);
   const shownEvidence = showAllEvidence ? filteredAttestations : filteredAttestations.slice(0, 12);
@@ -366,8 +369,8 @@ export default function CharacterRecordView() {
         </div>
         <div className="cr-record-actions">
           <div className="cr-neighbors">
-            {data.neighbors.previous ? <a href={`/characters/view?id=${encodeURIComponent(data.neighbors.previous.id)}`}>‹ <span>Prev: {data.neighbors.previous.glyph}</span></a> : <span />}
-            {data.neighbors.next ? <a href={`/characters/view?id=${encodeURIComponent(data.neighbors.next.id)}`}><span>Next: {data.neighbors.next.glyph}</span> ›</a> : <span />}
+            {data.neighbors.previous ? <a href={withBase(`/characters/view?id=${encodeURIComponent(data.neighbors.previous.id)}`)}>‹ <span>Prev: {data.neighbors.previous.glyph}</span></a> : <span />}
+            {data.neighbors.next ? <a href={withBase(`/characters/view?id=${encodeURIComponent(data.neighbors.next.id)}`)}><span>Next: {data.neighbors.next.glyph}</span> ›</a> : <span />}
           </div>
           <div className="cr-action-buttons"><button onClick={doCopyCitation}>⧉ Copy citation</button><button onClick={doStableLink}>⌁ Stable link</button><button onClick={doExport}>⇩ Export record</button></div>
           {actionMessage && <div className="cr-action-message">{actionMessage}</div>}
@@ -410,7 +413,7 @@ export default function CharacterRecordView() {
             <div><span>Strokes (source)</span><b>{sourceStroke}</b></div>
             <div><span>Status</span><b>{data.character.notStandard ? 'Non-standard' : 'Standard'}</b></div>
           </div>
-          {data.graphicVariants.length > 0 && <div className="cr-variant-strip"><h3>Graphic variants</h3>{data.graphicVariants.map(variant => <a key={variant.key} href={`/characters/view?id=${encodeURIComponent(variant.targetCharacterId)}`}><Glyph glyph={variant.targetGlyph} link={null} className="cr-variant-glyph" /><span>{variant.typology || 'relation'} · {variant.evidenceCount} loci</span></a>)}</div>}
+          {data.graphicVariants.length > 0 && <div className="cr-variant-strip"><h3>Graphic variants</h3>{data.graphicVariants.map(variant => <a key={variant.key} href={withBase(`/characters/view?id=${encodeURIComponent(variant.targetCharacterId)}`)}><Glyph glyph={variant.targetGlyph} link={null} className="cr-variant-glyph" /><span>{variant.typology || 'relation'} · {variant.evidenceCount} loci</span></a>)}</div>}
         </section>
 
       </div>

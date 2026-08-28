@@ -2,31 +2,32 @@
 import CharactersLayout from '../layouts/CharactersLayout.astro';
 import PersonCard from '../components/credits/PersonCard.astro';
 import '../components/credits/credits.css';
+import { withBase } from '../components/chind/paths';
 
 const institutions = [
   {
     name: 'Sapienza Università di Roma',
-    logo: '/images/chind/credits/institutions/sapienza.svg',
+    logo: withBase('/images/chind/credits/institutions/sapienza.svg'),
     className: 'sapienza',
   },
   {
     name: `Università degli Studi di Napoli “L’Orientale”`,
-    logo: '/images/chind/credits/institutions/orientale.svg',
+    logo: withBase('/images/chind/credits/institutions/orientale.svg'),
     className: 'orientale',
   },
   {
     name: 'Università degli Studi della Tuscia',
-    logo: '/images/chind/credits/institutions/unitus.svg',
+    logo: withBase('/images/chind/credits/institutions/unitus.svg'),
     className: 'unitus',
   },
   {
     name: 'Università degli Studi di Perugia',
-    logo: '/images/chind/credits/institutions/unipg.svg',
+    logo: withBase('/images/chind/credits/institutions/unipg.svg'),
     className: 'unipg',
   },
   {
     name: 'LAD · Laboratorio di Archeologia Digitale, Sapienza Università di Roma',
-    logo: '/images/chind/credits/institutions/lad.png',
+    logo: withBase('/images/chind/credits/institutions/lad.png'),
     className: 'lad',
   },
 ];

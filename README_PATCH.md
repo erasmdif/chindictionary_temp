@@ -1,36 +1,33 @@
-# CHIND — Text Comparison UI refinement
+# CHIND — GitHub Pages prerender cleanup fix
 
-Incremental patch for the already installed Text Comparison tool.
+Astro 6 may leave build-time prerender chunks in `dist/.prerender/`. Because CHIND reads `DIRECTUS_TOKEN` through `import.meta.env` during static generation, the build-time Directus helper chunk can contain the token value even though the generated public pages do not.
 
-## Changes
+This patch:
 
-- Refines the Text Comparison visual language to better match Dictionary / Character Detail.
-- Keeps the comparison workspace at a controlled viewport-relative height.
-- Gives the compared text and Scholarly Inspector independent internal scrollbars.
-- Automatically scrolls the inspector back to the top when a newly selected token is opened.
-- Adds contextual inspector actions:
-  - Character record
-  - first available Dictionary locus
-  - Character Index
-  - historical glyph source when available
-  - first / second component records for disyllabic units
-- Adds a new verbal **Text comparison** section to `/documentation` (no infographic yet).
+1. removes `dist/.prerender/` after the static build has completed;
+2. then runs the existing full secret audit on the remaining `dist/` tree;
+3. uploads only the cleaned static artifact to GitHub Pages.
 
-## Files overwritten
+No Directus/core CMS code is modified.
 
-- `usr/components/text-comparison/TextComparison.tsx`
-- `usr/components/text-comparison/text-comparison.css`
-- `usr/pages/documentation.astro`
+## Local verification
 
-## Not changed
-
-- No Directus query or endpoint changes.
-- No `core/**` files.
-- No original sCMS `.ts`, `.tsx` or `.mjs` files.
-- No package changes or new dependencies.
-
-Restart after drag & drop:
+After a successful GitHub Pages build:
 
 ```bash
-env -u DIRECTUS_TOKEN -u DIRECTUS_URL npm run dev
+set -a
+source .env
+set +a
+
+node scripts/prepare-pages-artifact.mjs
+node scripts/check-build-secrets.mjs
+
+unset DIRECTUS_TOKEN DIRECTUS_URL
+```
+
+Expected output includes:
+
+```text
+Removed Astro build-only prerender internals: dist/.prerender/
+Secret audit passed: DIRECTUS_TOKEN was not found in dist/.
 ```

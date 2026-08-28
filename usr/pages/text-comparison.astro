@@ -2,7 +2,8 @@
 import SEO from '../../core/components/SEO/SEO.astro';
 import { siteMetadata } from '../user.config.mjs';
 import ChindTopNav from '../components/chind/ChindTopNav.astro';
-import TextComparison from '../components/text-comparison/TextComparison';
+import TextComparisonApp from '../components/text-comparison/TextComparison';
+import { withBase } from '../components/chind/paths';
 ---
 <!doctype html>
 <html lang="en">
@@ -14,7 +15,7 @@ import TextComparison from '../components/text-comparison/TextComparison';
       description="Compare an external Chinese text with characters, historical glyphs, graphic variants and disyllabic units recorded in CHIND."
       siteMetadata={siteMetadata}
     />
-    <link rel="icon" type="image/png" href="/images/favicon.png" />
+    <link rel="icon" type="image/png" href={withBase('/images/favicon.png')} />
     <style is:global>
       *, *::before, *::after { box-sizing: border-box; }
       html, body { min-width: 320px; min-height: 100%; margin: 0; }
@@ -29,6 +30,6 @@ import TextComparison from '../components/text-comparison/TextComparison';
   </head>
   <body>
     <ChindTopNav />
-    <TextComparison client:load />
+    <TextComparisonApp client:load />
   </body>
 </html>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { CharacterLocus, CharacterRecord, CharacterReading, CharacterVariant, CharactersPayload, CharactersLatinPayload, LatinDefinitionRecord } from './types';
 import './characters.css';
+import { withBase } from '../chind/paths';
 
 type Mode = 'modern' | 'source';
 type CellSelection = { radical: string; stroke: string } | null;
@@ -21,7 +22,7 @@ let latinPayloadPromise: Promise<CharactersLatinPayload> | null = null;
 
 function loadPayload(): Promise<CharactersPayload> {
   if (!payloadPromise) {
-    payloadPromise = fetch('/data/characters-index.json')
+    payloadPromise = fetch(withBase('/data/characters-index.json'))
       .then(async response => {
         const body = await response.json();
         if (!response.ok) throw new Error(body?.error || `Character index request failed (${response.status})`);
@@ -33,7 +34,7 @@ function loadPayload(): Promise<CharactersPayload> {
 
 function loadLatinPayload(): Promise<CharactersLatinPayload> {
   if (!latinPayloadPromise) {
-    latinPayloadPromise = fetch('/data/characters-latin.json')
+    latinPayloadPromise = fetch(withBase('/data/characters-latin.json'))
       .then(async response => {
         const body = await response.json();
         if (!response.ok) throw new Error(body?.error || `Latin-definition index request failed (${response.status})`);
@@ -898,7 +899,7 @@ export default function CharacterExplorer() {
                   </div>
                   <p className="chr-character-meaning">{selectedReading?.english || 'No modern English definition recorded.'}</p>
                   <div className="chr-character-actions">
-                    <a href={`/characters/view?id=${encodeURIComponent(selectedCharacter.id)}`}>OPEN CHARACTER RECORD</a>
+                    <a href={withBase(`/characters/view?id=${encodeURIComponent(selectedCharacter.id)}`)}>OPEN CHARACTER RECORD</a>
                   </div>
                   <section className="chr-inspector-section chr-latin-section">
                     <h3>DEFINITIO LATINA</h3>
@@ -934,7 +935,7 @@ export default function CharacterExplorer() {
                     <h3>DICTIONARY LOCI ({countLoci(selectedLoci)})</h3>
                     <div className="chr-loci-list">
                       {selectedLoci.slice(0, 12).map((locus, index) => locus.page != null ? (
-                        <a key={`${locus.dictionaryId}:${locus.page}:${locus.line}:${index}`} href={`/dictionary?page=${encodeURIComponent(locus.page)}&line=${encodeURIComponent(text(locus.line))}`} title={locus.typologies.join(', ')}>{formatLocus(locus)}</a>
+                        <a key={`${locus.dictionaryId}:${locus.page}:${locus.line}:${index}`} href={withBase(`/dictionary?page=${encodeURIComponent(locus.page)}&line=${encodeURIComponent(text(locus.line))}`)} title={locus.typologies.join(', ')}>{formatLocus(locus)}</a>
                       ) : null)}
                       {selectedLoci.length > 12 && <span>+ {selectedLoci.length - 12} more loci</span>}
                     </div>
@@ -986,7 +987,7 @@ export default function CharacterExplorer() {
                       <td>{selectedCell?.stroke ?? '—'}</td>
                       <td>{result.occurrenceCount.toLocaleString()}</td>
                       <td className="chr-loci-mini">
-                        {result.loci.slice(0, 3).map((locus, index) => locus.page != null ? <a key={`${locus.page}:${locus.line}:${index}`} href={`/dictionary?page=${encodeURIComponent(locus.page)}&line=${encodeURIComponent(text(locus.line))}`}>p. {locus.page} · l.{text(locus.line) || '—'}</a> : null)}
+                        {result.loci.slice(0, 3).map((locus, index) => locus.page != null ? <a key={`${locus.page}:${locus.line}:${index}`} href={withBase(`/dictionary?page=${encodeURIComponent(locus.page)}&line=${encodeURIComponent(text(locus.line))}`)}>p. {locus.page} · l.{text(locus.line) || '—'}</a> : null)}
                         {result.loci.length > 3 && <span>+{result.loci.length - 3}</span>}
                       </td>
                     </tr>

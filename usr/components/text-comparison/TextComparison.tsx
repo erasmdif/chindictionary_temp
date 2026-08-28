@@ -7,6 +7,7 @@ import type {
   TextComparisonIndexPayload,
 } from './types';
 import './text-comparison.css';
+import { withBase } from '../chind/paths';
 
 type CharacterDetailPayload = {
   character?: {
@@ -164,7 +165,7 @@ export default function TextComparison() {
 
   useEffect(() => {
     let active = true;
-    fetch('/data/text-comparison-index.json')
+    fetch(withBase('/data/text-comparison-index.json'))
       .then(async response => {
         const body = await response.json();
         if (!response.ok) throw new Error(body?.error || `HTTP ${response.status}`);
@@ -309,7 +310,7 @@ export default function TextComparison() {
     let active = true;
     setDetailLoading(true);
     setDetailError(null);
-    fetch(`/data/character-record/${encodeURIComponent(characterId)}.json`)
+    fetch(withBase(`/data/character-record/${encodeURIComponent(characterId)}.json`))
       .then(async response => {
         const body = await response.json();
         if (!response.ok) throw new Error(body?.error || `HTTP ${response.status}`);
@@ -557,23 +558,23 @@ export default function TextComparison() {
 
               <nav className="tc-inspector-actions" aria-label="Selected element actions">
                 {primaryCharacter && (
-                  <a className="tc-action tc-action-primary" href={`/characters/view?id=${primaryCharacter.id}`}>Character record ↗</a>
+                  <a className="tc-action tc-action-primary" href={withBase(`/characters/view?id=${primaryCharacter.id}`)}>Character record ↗</a>
                 )}
                 {firstAttestation && (
                   <a
                     className="tc-action"
-                    href={`/dictionary?page=${firstAttestation.page}${firstAttestation.line != null ? `&line=${encodeURIComponent(String(firstAttestation.line))}` : ''}`}
+                    href={withBase(`/dictionary?page=${firstAttestation.page}${firstAttestation.line != null ? `&line=${encodeURIComponent(String(firstAttestation.line))}` : ''}`)}
                   >
                     Open dictionary locus ↗
                   </a>
                 )}
                 {selected.status === 'compound' && primaryCompound && (
                   <>
-                    <a className="tc-action tc-action-primary" href={`/characters/view?id=${primaryCompound.first.characterId}`}>First component ↗</a>
-                    <a className="tc-action" href={`/characters/view?id=${primaryCompound.second.characterId}`}>Second component ↗</a>
+                    <a className="tc-action tc-action-primary" href={withBase(`/characters/view?id=${primaryCompound.first.characterId}`)}>First component ↗</a>
+                    <a className="tc-action" href={withBase(`/characters/view?id=${primaryCompound.second.characterId}`)}>Second component ↗</a>
                   </>
                 )}
-                <a className="tc-action" href="/characters">Open character index ↗</a>
+                <a className="tc-action" href={withBase('/characters')}>Open character index ↗</a>
                 {primaryCharacter?.formalism && primaryCharacter.glyphLink && (
                   <a className="tc-action" href={primaryCharacter.glyphLink} target="_blank" rel="noopener noreferrer">Historical glyph source ↗</a>
                 )}
@@ -592,8 +593,8 @@ export default function TextComparison() {
                   <div className="tc-compound-word">{compound.displayWord}</div>
                   <dl>
                     <div><dt>Historical reading</dt><dd>{compound.historicalRomanisation || '—'}</dd></div>
-                    <div><dt>First component</dt><dd><a href={`/characters/view?id=${compound.first.characterId}`}>{compound.first.glyph}</a> {compound.first.historical || ''}</dd></div>
-                    <div><dt>Second component</dt><dd><a href={`/characters/view?id=${compound.second.characterId}`}>{compound.second.glyph}</a> {compound.second.historical || ''}</dd></div>
+                    <div><dt>First component</dt><dd><a href={withBase(`/characters/view?id=${compound.first.characterId}`)}>{compound.first.glyph}</a> {compound.first.historical || ''}</dd></div>
+                    <div><dt>Second component</dt><dd><a href={withBase(`/characters/view?id=${compound.second.characterId}`)}>{compound.second.glyph}</a> {compound.second.historical || ''}</dd></div>
                     {compound.word && <div><dt>Recorded word</dt><dd>{compound.word}</dd></div>}
                   </dl>
                   <p className="tc-method-note">Composite matching is based exclusively on records currently stored in <code>composite_words</code>.</p>
@@ -607,7 +608,7 @@ export default function TextComparison() {
                   <div className="tc-variant-list">
                     {selected.variants.map(relation => (
                       <div className="tc-variant-row" key={`${relation.relationId}-${relation.sourceCharacterId}-${relation.variantCharacterId}`}>
-                        <span className="tc-variant-pair"><a href={`/characters/view?id=${relation.sourceCharacterId}`}>{relation.sourceGlyph}</a> → <a href={`/characters/view?id=${relation.variantCharacterId}`}>{relation.variantGlyph}</a></span>
+                        <span className="tc-variant-pair"><a href={withBase(`/characters/view?id=${relation.sourceCharacterId}`)}>{relation.sourceGlyph}</a> → <a href={withBase(`/characters/view?id=${relation.variantCharacterId}`)}>{relation.variantGlyph}</a></span>
                         <span>{relation.typology || 'graphic relation'}</span>
                         <small>{relation.evidenceCount} documentary {relation.evidenceCount === 1 ? 'link' : 'links'}</small>
                       </div>
@@ -623,7 +624,7 @@ export default function TextComparison() {
                     <div className="tc-character-summary" key={character.id}>
                       <div className="tc-character-title">
                         <span>{character.displayCharacter}</span>
-                        <a href={`/characters/view?id=${character.id}`}>Open full record ↗</a>
+                        <a href={withBase(`/characters/view?id=${character.id}`)}>Open full record ↗</a>
                       </div>
                       {character.glyphLink && character.formalism && (
                         <a className="tc-glyph-link" href={character.glyphLink} target="_blank" rel="noopener noreferrer">Open historical glyph reference ↗</a>
@@ -655,7 +656,7 @@ export default function TextComparison() {
                       {detail.attestations.slice(0, 4).map(att => (
                         <article key={att.id}>
                           <div className="tc-attestation-meta">
-                            <a href={`/dictionary?page=${att.page ?? ''}${att.line != null ? `&line=${encodeURIComponent(String(att.line))}` : ''}`}>p. {att.page ?? '—'} · l. {att.line ?? '—'}</a>
+                            <a href={withBase(`/dictionary?page=${att.page ?? ''}${att.line != null ? `&line=${encodeURIComponent(String(att.line))}` : ''}`)}>p. {att.page ?? '—'} · l. {att.line ?? '—'}</a>
                             <span>{att.typology || 'occurrence'}</span>
                           </div>
                           {att.latinDefinitionHtml && <div className="tc-latin" dangerouslySetInnerHTML={{ __html: att.latinDefinitionHtml }} />}
