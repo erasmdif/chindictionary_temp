@@ -1,0 +1,62 @@
+---
+import { getValueByDotPath, Image } from '@core/components/Record';
+
+interface Props {
+  record: any;
+  table?: string;
+  id?: string;
+}
+
+const { record, table, id } = Astro.props;
+
+
+const entries = Object.entries(record || {})
+  .filter(([key]) => key !== 'Thumbnail')
+  .filter(([, value]) => {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'string' && value.trim() === '') return false;
+    return true;
+  });
+
+const heading = getValueByDotPath(record, 'Site_Name');
+---
+
+<div class="container py-4">
+  <div class="mb-4">
+    <h1 class="display-6 fw-bold mb-2">{heading}</h1>
+    <p class="small text-secondary mb-0">Table: {table} | ID: {id}</p>
+  </div>
+
+  <div class="mb-4">
+    <Image
+      fieldName='Thumbnail'
+      record={record}
+      className="img-fluid rounded shadow"
+      alt={heading}
+    />
+  </div>
+
+  {entries.length > 0 ? (
+    <div class="row g-3">
+      {entries.map(([key, value]) => (
+        <div class="col-12 col-md-6">
+          <div class="border rounded p-3 h-100">
+            <div class="small fw-semibold text-secondary mb-1">{key}</div>
+            <div class="small">
+              {value === 'true' || value === 'false' ? (
+                <input type="checkbox" disabled checked={value} />
+              ) : typeof value === 'string' || typeof value === 'number' ? (
+                String(value)
+              ) : (
+                <pre class="bg-light p-2 rounded"><code>{JSON.stringify(value, null, 2)}</code></pre>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div class="alert alert-info mb-0" role="alert">Record is empty.</div>
+  )}
+</div>
+

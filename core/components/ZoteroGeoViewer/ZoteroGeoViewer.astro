@@ -1,0 +1,26 @@
+---
+/**
+ * ZoteroGeoViewer - Astro wrapper for the ZoteroGeoViewer React component
+ * 
+ * This component fetches data from a Zotero group library and displays
+ * items with geographical coordinates on a map with tag-based filtering.
+ */
+
+import { ZoteroGeoViewer as ZoteroGeoViewerClient } from './ZoteroGeoViewer.tsx';
+import type { ZoteroGeoViewerProps } from './types.ts';
+
+export interface Props extends ZoteroGeoViewerProps {}
+
+const { groupId, layout = '8x4', ...restProps } = Astro.props;
+
+if (!groupId) {
+  throw new Error('ZoteroGeoViewer requires a groupId prop');
+}
+---
+
+<ZoteroGeoViewerClient 
+  groupId={groupId}
+  layout={layout}
+  {...restProps}
+  client:idle
+/>

@@ -1,0 +1,546 @@
+---
+import SEO from '../../core/components/SEO/SEO.astro';
+import { siteMetadata } from '../user.config.mjs';
+import ChindTopNav from '../components/chind/ChindTopNav.astro';
+import DocumentationFigure from '../components/documentation/DocumentationFigure.astro';
+import '../components/documentation/documentation.css';
+
+const dictionaryPageCallouts = [
+  { number: 1, title: 'Page navigation', href: '#dict-page-1', anchorLeft: 49, anchorTop: 4, boxLeft: 80, boxTop: 8, boxWidth: '11rem' },
+  { number: 2, title: 'Page quick list', href: '#dict-page-2', anchorLeft: 8, anchorTop: 42, boxLeft: -1, boxTop: 34, boxWidth: '10rem' },
+  { number: 3, title: 'Current page', href: '#dict-page-3', anchorLeft: 8, anchorTop: 18, boxLeft: -1, boxTop: 16, boxWidth: '9rem' },
+  { number: 4, title: 'Main dictionary body', href: '#dict-page-4', anchorLeft: 43, anchorTop: 46, boxLeft: 52, boxTop: -2, boxWidth: '11rem' },
+  { number: 5, title: 'Row-based content', href: '#dict-page-5', anchorLeft: 46, anchorTop: 78, boxLeft: 62, boxTop: 104, boxWidth: '10rem' },
+  { number: 6, title: 'Detail sidebar', href: '#dict-page-6', anchorLeft: 90, anchorTop: 45, boxLeft: 104, boxTop: 48, boxWidth: '9rem' },
+  { number: 7, title: 'Filters panel', href: '#dict-page-7', anchorLeft: 7, anchorTop: 92, boxLeft: -1, boxTop: 93, boxWidth: '9rem' },
+];
+
+const dictionaryRowCallouts = [
+  { number: 1, title: 'Stroke boundary marker', href: '#dict-row-1', anchorLeft: 3, anchorTop: 34, boxLeft: -3, boxTop: 18, boxWidth: '11rem' },
+  { number: 2, title: 'Character & main reading', href: '#dict-row-2', anchorLeft: 12, anchorTop: 42, boxLeft: 16, boxTop: -10, boxWidth: '11rem' },
+  { number: 3, title: 'Alternative readings', href: '#dict-row-3', anchorLeft: 14, anchorTop: 73, boxLeft: 24, boxTop: 112, boxWidth: '10rem' },
+  { number: 4, title: 'Definition block', href: '#dict-row-4', anchorLeft: 42, anchorTop: 44, boxLeft: 48, boxTop: -10, boxWidth: '10rem' },
+  { number: 5, title: 'Glosses', href: '#dict-row-5', anchorLeft: 68, anchorTop: 47, boxLeft: 72, boxTop: -10, boxWidth: '8rem' },
+  { number: 6, title: 'Graphic variants', href: '#dict-row-6', anchorLeft: 81, anchorTop: 45, boxLeft: 84, boxTop: -10, boxWidth: '9rem' },
+  { number: 7, title: 'Synonym cross', href: '#dict-row-7', anchorLeft: 93, anchorTop: 49, boxLeft: 102, boxTop: 18, boxWidth: '9rem' },
+];
+
+const charactersOverviewCallouts = [
+  {
+    number: 1,
+    title: 'Radical browsing controls',
+    href: '#idx-overview-1',
+    anchorLeft: 8,
+    anchorTop: 35,
+    boxLeft: -9,
+    boxTop: 28,
+    boxWidth: '10.5rem',
+  },
+  {
+    number: 2,
+    title: 'Filters & quick stats',
+    href: '#idx-overview-2',
+    anchorLeft: 8,
+    anchorTop: 70,
+    boxLeft: -9,
+    boxTop: 68,
+    boxWidth: '10.5rem',
+  },
+  { number: 3, title: 'Matrix grid', href: '#idx-overview-3', anchorLeft: 50, anchorTop: 43, boxLeft: 61, boxTop: -5, boxWidth: '8rem' },
+  { number: 4, title: 'Selected cell results', href: '#idx-overview-4', anchorLeft: 50, anchorTop: 78, boxLeft: 57, boxTop: 104, boxWidth: '11rem' },
+  { number: 5, title: 'Selected character panel', href: '#idx-overview-5', anchorLeft: 89, anchorTop: 45, boxLeft: 96, boxTop: 24, boxWidth: '11rem' },
+];
+
+const charactersTableCallouts = [
+  { number: 1, title: 'Character preview', href: '#idx-table-1', anchorLeft: 5, anchorTop: 50, boxLeft: -2, boxTop: 20, boxWidth: '10rem' },
+  { number: 2, title: 'Readings & labels', href: '#idx-table-2', anchorLeft: 16, anchorTop: 48, boxLeft: 18, boxTop: -10, boxWidth: '10rem' },
+  { number: 3, title: 'English gloss', href: '#idx-table-3', anchorLeft: 46, anchorTop: 48, boxLeft: 42, boxTop: -10, boxWidth: '9rem' },
+  { number: 4, title: 'Attestation count', href: '#idx-table-4', anchorLeft: 72, anchorTop: 48, boxLeft: 78, boxTop: -10, boxWidth: '9rem' },
+  { number: 5, title: 'Dictionary loci', href: '#idx-table-5', anchorLeft: 88, anchorTop: 48, boxLeft: 102, boxTop: 18, boxWidth: '9rem' },
+];
+
+const charactersAnalyticsCallouts = [
+  { number: 1, title: 'Attestations over pages', href: '#idx-analytics-1', anchorLeft: 18, anchorTop: 48, boxLeft: 17, boxTop: -18, boxWidth: '11rem' },
+  { number: 2, title: 'Stroke count distribution', href: '#idx-analytics-2', anchorLeft: 54, anchorTop: 48, boxLeft: 53, boxTop: -18, boxWidth: '12rem' },
+  { number: 3, title: 'Locus density heatmap', href: '#idx-analytics-3', anchorLeft: 84, anchorTop: 48, boxLeft: 84, boxTop: -18, boxWidth: '10rem' },
+];
+
+const characterTopCallouts = [
+  { number: 1, title: 'Section sidebar', href: '#char-top-1', anchorLeft: 8, anchorTop: 52, boxLeft: -1, boxTop: 32, boxWidth: '9rem' },
+  { number: 2, title: 'Character identity & hero data', href: '#char-top-2', anchorLeft: 33, anchorTop: 12, boxLeft: 34, boxTop: -6, boxWidth: '13rem' },
+  { number: 3, title: 'Readings & definitions table', href: '#char-top-3', anchorLeft: 35, anchorTop: 38, boxLeft: 28, boxTop: 104, boxWidth: '12rem' },
+  { number: 4, title: 'Relationship map', href: '#char-top-4', anchorLeft: 79, anchorTop: 37, boxLeft: 102, boxTop: 24, boxWidth: '10rem' },
+  { number: 5, title: 'Navigation & citation tools', href: '#char-top-5', anchorLeft: 84, anchorTop: 11, boxLeft: 102, boxTop: 8, boxWidth: '11rem' },
+];
+
+const characterBottomCallouts = [
+  { number: 1, title: 'Polysyllabic constructions', href: '#char-bottom-1', anchorLeft: 18, anchorTop: 26, boxLeft: 16, boxTop: -8, boxWidth: '12rem' },
+  { number: 2, title: 'Graphic forms & indexing', href: '#char-bottom-2', anchorLeft: 48, anchorTop: 27, boxLeft: 49, boxTop: -8, boxWidth: '11rem' },
+  { number: 3, title: 'Documentary evidence', href: '#char-bottom-3', anchorLeft: 52, anchorTop: 72, boxLeft: 49, boxTop: 104, boxWidth: '10rem' },
+  { number: 4, title: 'Notes & sources', href: '#char-bottom-4', anchorLeft: 11, anchorTop: 91, boxLeft: 15, boxTop: 104, boxWidth: '9rem' },
+];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <SEO
+      title="Documentation · CHIND"
+      description="Interface guide and reading manual for the CHIND digital edition."
+      siteMetadata={siteMetadata}
+    />
+    <link rel="icon" type="image/png" href="/images/favicon.png" />
+  </head>
+  <body>
+    <ChindTopNav />
+
+    <main class="doc-page">
+      <div class="doc-shell">
+        <aside class="doc-sidebar">
+          <h2>Documentation</h2>
+          <p>
+            A compact guide to the CHIND interface, with annotated figures and short explanations for each main section.
+          </p>
+
+          <nav aria-label="Documentation navigation">
+            <ul>
+              <li class="doc-nav-item">
+                <a href="#introduction">Introduction</a>
+              </li>
+              <li class="doc-nav-item">
+                <a href="#home">Home</a>
+              </li>
+              <li class="doc-nav-item">
+                <a href="#text-comparison">Text comparison</a>
+              </li>
+              <li class="doc-nav-item">
+                <a href="#dictionary">Dictionary</a>
+                <ul class="doc-nav-sub">
+                  <li><a href="#dictionary-page">Reading a dictionary page</a></li>
+                  <li><a href="#dictionary-row">Reading a dictionary row</a></li>
+                </ul>
+              </li>
+              <li class="doc-nav-item">
+                <a href="#index">Index</a>
+                <ul class="doc-nav-sub">
+                  <li><a href="#index-overview">General layout</a></li>
+                  <li><a href="#index-table">Results table</a></li>
+                  <li><a href="#index-analytics">Analytics bar</a></li>
+                </ul>
+              </li>
+              <li class="doc-nav-item">
+                <a href="#character-detail">Character detail</a>
+                <ul class="doc-nav-sub">
+                  <li><a href="#character-top">Upper section</a></li>
+                  <li><a href="#character-bottom">Lower section</a></li>
+                </ul>
+              </li>
+              <li class="doc-nav-item">
+                <a href="#credits">Credits</a>
+              </li>
+            </ul>
+          </nav>
+        </aside>
+
+        <article class="doc-content">
+          <header class="doc-hero" id="introduction">
+            <span class="doc-kicker">Guide</span>
+            <h1>Using the CHIND interface</h1>
+            <p>
+              This section explains how to navigate the digital environment dedicated to Basilio Brollo’s <em>Dictionarium sinico-latinum</em>.
+              The documentation is organised by page type: Home, Text Comparison, Dictionary, Index, Character Detail, and Credits.
+              Each figure below is interactive: the numbered labels open the corresponding explanatory note.
+            </p>
+            <div class="doc-intro-grid">
+              <div class="doc-intro-card">
+                <strong>How to use this page</strong>
+                <span>Start with a section in the left sidebar, then follow the numbered annotations attached to each screenshot.</span>
+              </div>
+              <div class="doc-intro-card">
+                <strong>What changes with filters</strong>
+                <span>Most tables and charts are dynamic. Counts, loci and distributions will change according to the active query.</span>
+              </div>
+              <div class="doc-intro-card">
+                <strong>About the screenshots</strong>
+                <span>The examples are illustrative. The layout is stable, but the exact data visible in the screenshots can vary over time.</span>
+              </div>
+            </div>
+          </header>
+
+          <section class="doc-section" id="home">
+            <h2>Home</h2>
+            <p class="doc-lead">
+              The home page provides a concise introduction to the project and foregrounds the main access points to the digital edition.
+              It also works as a thematic landing page, connecting the research framework, the historical context of Basilio Brollo,
+              and the main navigational branches of the website.
+            </p>
+            <div class="doc-simple-grid">
+              <div class="doc-simple-card">
+                <h3>Project presentation</h3>
+                <p>
+                  The introductory blocks summarise the CHIN-DICTIONARY project, the historical importance of the manuscript,
+                  and the broader scholarly aims of the digital edition.
+                </p>
+              </div>
+              <div class="doc-simple-card">
+                <h3>Gateway to the edition</h3>
+                <p>
+                  The top navigation bar is shared across the site. From the home page the reader can quickly move to Documentation,
+                  Text Comparison, the Character Index, the Dictionary browser, and the Credits page.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section class="doc-section" id="text-comparison">
+            <h2>Text comparison</h2>
+            <p class="doc-lead">
+              The Text Comparison tool allows an external Chinese text to be checked against the lexicographic material represented in CHIND.
+              Users can paste text directly or upload a supported file, then inspect which characters are directly attested in the manuscript,
+              represented through a linked historical glyph, documented only as occurrence-backed graphic variants, or absent from the current dataset.
+              An optional mode also identifies two-character units recorded in <code>composite_words</code>.
+            </p>
+            <div class="doc-simple-grid">
+              <div class="doc-simple-card">
+                <h3>Reading the comparison</h3>
+                <p>
+                  Colour-coded highlights are applied directly to the submitted text. Clicking a recognised character or compound updates the Scholarly Inspector,
+                  where the reader can review readings, attestation counts, documentary evidence, and links to the full Character Record or the relevant Dictionary locus.
+                </p>
+              </div>
+              <div class="doc-simple-card">
+                <h3>Long texts and optional modes</h3>
+                <p>
+                  Long texts can be browsed in manageable blocks, while the text and inspector use independent scrolling areas so that contextual information remains visible during close reading.
+                  Historical romanisation and disyllabic matching can be enabled independently according to the purpose of the comparison.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section class="doc-section" id="dictionary">
+            <h2>Dictionary</h2>
+            <p class="doc-lead">
+              The Dictionary page is the main environment for browsing the manuscript page by page. It groups entries by page and line,
+              exposes the internal structure of each row, and shows contextual details in the right sidebar when the user clicks on a synonym.
+            </p>
+
+            <div class="doc-subgroup" id="dictionary-page">
+              <h3>Reading a dictionary page</h3>
+              <p>
+                The first figure introduces the overall layout of the page-level browser. Use it to understand how page navigation,
+                row navigation, filtering, and the contextual sidebar are coordinated.
+              </p>
+
+              <DocumentationFigure
+                src="/images/chind/documentation/dictionary-page.png"
+                alt="Annotated example of the dictionary page layout"
+                caption="Annotated example of the page-level dictionary browser. Click a numbered label to jump to the related explanation below."
+                callouts={dictionaryPageCallouts}
+                leftGutter="118px"
+                rightGutter="122px"
+                topGutter="76px"
+                bottomGutter="68px"
+              />
+
+              <div class="doc-notes">
+                <section class="doc-note" id="dict-page-1">
+                  <h4><span class="doc-step-badge">1</span> Page navigation</h4>
+                  <p>The upper controls allow the reader to move backwards and forwards through the manuscript, or to jump directly to a requested page.</p>
+                </section>
+                <section class="doc-note" id="dict-page-2">
+                  <h4><span class="doc-step-badge">2</span> Page quick list</h4>
+                  <p>The left column summarises the lines currently visible on the selected page. It is a quick page-level navigator rather than a full search index.</p>
+                </section>
+                <section class="doc-note" id="dict-page-3">
+                  <h4><span class="doc-step-badge">3</span> Current page</h4>
+                  <p>The current page number is always visible and remains the main reference for all loci cited elsewhere in the application.</p>
+                </section>
+                <section class="doc-note" id="dict-page-4">
+                  <h4><span class="doc-step-badge">4</span> Main dictionary body</h4>
+                  <p>This central area displays the reconstructed content of the manuscript page. Entries are organised by page and line, then expanded into structured columns.</p>
+                </section>
+                <section class="doc-note" id="dict-page-5">
+                  <h4><span class="doc-step-badge">5</span> Row-based content</h4>
+                  <p>Each visible row may contain one or more readings, variants, glosses, graphic forms and synonym information. The internal logic of a row is explained in the next figure.</p>
+                </section>
+                <section class="doc-note" id="dict-page-6">
+                  <h4><span class="doc-step-badge">6</span> Detail sidebar</h4>
+                  <p>The right sidebar updates when a synonym or related element is selected. It presents a focused view of the chosen relation and the relevant contextual data.</p>
+                </section>
+                <section class="doc-note" id="dict-page-7">
+                  <h4><span class="doc-step-badge">7</span> Filters panel</h4>
+                  <p>The filter controls refine the current page view. They allow the reader to narrow the visible material without leaving the dictionary browser.</p>
+                </section>
+              </div>
+            </div>
+
+            <div class="doc-subgroup" id="dictionary-row">
+              <h3>Reading a dictionary row</h3>
+              <p>
+                The second figure focuses on a single row. It is useful for understanding how a manuscript entry is decomposed into fields,
+                how variants and alternatives are shown, and how cross-references are activated.
+              </p>
+
+              <DocumentationFigure
+                src="/images/chind/documentation/dictionary-row.png"
+                alt="Annotated example of a single dictionary row"
+                caption="A single row can contain the main reading, alternative readings, definitions, glosses and cross-references."
+                callouts={dictionaryRowCallouts}
+                leftGutter="128px"
+                rightGutter="108px"
+                topGutter="70px"
+                bottomGutter="62px"
+              />
+
+              <div class="doc-notes">
+                <section class="doc-note" id="dict-row-1">
+                  <h4><span class="doc-step-badge">1</span> Stroke boundary marker</h4>
+                  <p>The first narrow column is reserved for the stroke marker. When relevant, it shows the Chinese numeral corresponding to the recorded stroke boundary.</p>
+                </section>
+                <section class="doc-note" id="dict-row-2">
+                  <h4><span class="doc-step-badge">2</span> Character and main reading</h4>
+                  <p>This block presents the manuscript character together with its primary romanisation. Characters formalised with square brackets are rendered with an asterisk and link to their character record.</p>
+                </section>
+                <section class="doc-note" id="dict-row-3">
+                  <h4><span class="doc-step-badge">3</span> Alternative readings</h4>
+                  <p>Alternative or secondary readings are grouped beneath the main one. Only alternative readings are repeated here; pure variants are handled in the definitions column.</p>
+                </section>
+                <section class="doc-note" id="dict-row-4">
+                  <h4><span class="doc-step-badge">4</span> Definition block</h4>
+                  <p>The central definition area keeps the manuscript logic intact: main definition first, then explicitly marked variant definitions when the source distinguishes them.</p>
+                </section>
+                <section class="doc-note" id="dict-row-5">
+                  <h4><span class="doc-step-badge">5</span> Glosses</h4>
+                  <p>Chinese glosses are shown separately from the Latin definitions, preserving their documentary role inside the original lexicographic structure.</p>
+                </section>
+                <section class="doc-note" id="dict-row-6">
+                  <h4><span class="doc-step-badge">6</span> Graphic variants</h4>
+                  <p>The graphic variants column isolates alternative graphic forms related to the entry, allowing the reader to compare them at a glance.</p>
+                </section>
+                <section class="doc-note" id="dict-row-7">
+                  <h4><span class="doc-step-badge">7</span> Synonym cross</h4>
+                  <p>Synonyms are arranged in a cross-like layout by position. Clicking one of them opens the sidebar with the preferred scholarly interpretation and the other available options.</p>
+                </section>
+              </div>
+            </div>
+          </section>
+
+          <section class="doc-section" id="index">
+            <h2>Index</h2>
+            <p class="doc-lead">
+              The Index page offers a character-centred exploration of the dictionary. It combines radical-based browsing, text filters,
+              a matrix organised by radical and additional strokes, a result table for the selected cell, and a compact analytics bar.
+            </p>
+
+            <div class="doc-subgroup" id="index-overview">
+              <h3>General layout</h3>
+              <p>The overview figure highlights the main navigational logic of the character index.</p>
+              <DocumentationFigure
+                src="/images/chind/documentation/characters-overview.png"
+                alt="Annotated example of the general character index layout"
+                caption="The character index is organised around a radical × stroke matrix, supplemented by filtering controls and a selected-character sidebar."
+                callouts={charactersOverviewCallouts}
+                leftGutter="190px"
+                rightGutter="132px"
+                topGutter="84px"
+                bottomGutter="66px"
+              />
+
+              <div class="doc-notes">
+                <section class="doc-note" id="idx-overview-1">
+                  <h4><span class="doc-step-badge">1</span> Radical browsing controls</h4>
+                  <p>The left browsing area combines the radical-mode switch with the radical-family selector. The reader can move between source and modern radical indexing, then choose one of the attested radical families available in the current subset.</p>
+                </section>
+                <section class="doc-note" id="idx-overview-2">
+                  <h4><span class="doc-step-badge">2</span> Filters and quick stats</h4>
+                  <p>Historical romanisation, modern romanisation and English meaning can be filtered independently. The active-filter area records the current choices, while the quick statistics summarise the resulting subset.</p>
+                </section>
+                <section class="doc-note" id="idx-overview-3">
+                  <h4><span class="doc-step-badge">3</span> Matrix grid</h4>
+                  <p>The matrix crosses radicals with additional strokes. Each cell previews the first attested character in that slot and the total number of attested characters.</p>
+                </section>
+                <section class="doc-note" id="idx-overview-4">
+                  <h4><span class="doc-step-badge">4</span> Selected cell results</h4>
+                  <p>When a cell is selected, the result panel below the matrix lists the characters that belong to that combination together with their readings, counts and loci.</p>
+                </section>
+                <section class="doc-note" id="idx-overview-5">
+                  <h4><span class="doc-step-badge">5</span> Selected character panel</h4>
+                  <p>The right panel summarises the currently focused character and links the user both to the relevant dictionary loci and to the dedicated character record.</p>
+                </section>
+              </div>
+            </div>
+
+            <div class="doc-subgroup" id="index-table">
+              <h3>Detail of the results table</h3>
+              <p>The table translates a selected radical × stroke cell into a browsable list of characters.</p>
+              <DocumentationFigure
+                src="/images/chind/documentation/characters-table.png"
+                alt="Annotated example of the selected-cell results table"
+                caption="Each row in the results table opens a path toward either the dictionary browser or the full character record."
+                callouts={charactersTableCallouts}
+                leftGutter="116px"
+                rightGutter="112px"
+                topGutter="72px"
+                bottomGutter="64px"
+              />
+              <div class="doc-notes">
+                <section class="doc-note" id="idx-table-1">
+                  <h4><span class="doc-step-badge">1</span> Character preview</h4>
+                  <p>The first column displays the character currently indexed for the selected matrix cell.</p>
+                </section>
+                <section class="doc-note" id="idx-table-2">
+                  <h4><span class="doc-step-badge">2</span> Readings and labels</h4>
+                  <p>Historical and modern romanisations, together with the relevant labels, allow the reader to compare the documentary and normalised forms.</p>
+                </section>
+                <section class="doc-note" id="idx-table-3">
+                  <h4><span class="doc-step-badge">3</span> English gloss</h4>
+                  <p>The English meaning is meant as a quick orientation tool rather than a substitute for the full Latin definition in the dictionary page or character record.</p>
+                </section>
+                <section class="doc-note" id="idx-table-4">
+                  <h4><span class="doc-step-badge">4</span> Attestation count</h4>
+                  <p>This value tells the reader how many attestations are currently associated with the character in the active filtered subset.</p>
+                </section>
+                <section class="doc-note" id="idx-table-5">
+                  <h4><span class="doc-step-badge">5</span> Dictionary loci</h4>
+                  <p>The loci buttons open the relevant page and line in the dictionary browser, making it easy to move from the analytical index back to the source layout.</p>
+                </section>
+              </div>
+            </div>
+
+            <div class="doc-subgroup" id="index-analytics">
+              <h3>Detail of the analytics bar</h3>
+              <p>The lower analytics area condenses the most useful aggregate views for the current filtered subset.</p>
+              <DocumentationFigure
+                src="/images/chind/documentation/characters-analytics.png"
+                alt="Annotated example of the lower analytics charts"
+                caption="These charts react to the active filters and help the reader understand the distributional profile of the current subset."
+                callouts={charactersAnalyticsCallouts}
+                topGutter="84px"
+                bottomGutter="58px"
+              />
+              <div class="doc-notes">
+                <section class="doc-note" id="idx-analytics-1">
+                  <h4><span class="doc-step-badge">1</span> Attestations over pages</h4>
+                  <p>This chart shows how the current set of attestations is distributed across the manuscript pages.</p>
+                </section>
+                <section class="doc-note" id="idx-analytics-2">
+                  <h4><span class="doc-step-badge">2</span> Stroke count distribution</h4>
+                  <p>This histogram summarises the stroke counts recorded for the visible subset of characters.</p>
+                </section>
+                <section class="doc-note" id="idx-analytics-3">
+                  <h4><span class="doc-step-badge">3</span> Locus density heatmap</h4>
+                  <p>The heatmap aggregates page bins and line bins, making it possible to detect where attestations cluster in the manuscript.</p>
+                </section>
+              </div>
+            </div>
+          </section>
+
+          <section class="doc-section" id="character-detail">
+            <h2>Character detail</h2>
+            <p class="doc-lead">
+              The character record gathers all the information associated with a single entry point in the index. It is the most synthetic view of a character,
+              because it combines identity data, lexical relations, documentary evidence, and experimental reconstructions of compounds.
+            </p>
+
+            <div class="doc-subgroup" id="character-top">
+              <h3>Upper section</h3>
+              <p>The upper part of the page combines navigation, summary data, definitions, and the graph of lexical relations.</p>
+              <DocumentationFigure
+                src="/images/chind/documentation/character-detail-top.png"
+                alt="Annotated example of the upper part of a character record"
+                caption="The upper section is designed for orientation: it identifies the character and immediately exposes its main readings, relations and loci."
+                callouts={characterTopCallouts}
+                leftGutter="104px"
+                rightGutter="132px"
+                topGutter="82px"
+                bottomGutter="66px"
+              />
+              <div class="doc-notes">
+                <section class="doc-note" id="char-top-1">
+                  <h4><span class="doc-step-badge">1</span> Section sidebar</h4>
+                  <p>The internal sidebar lets the reader jump quickly between overview, readings, lexical relations, variants, compounds, attestation data, and notes.</p>
+                </section>
+                <section class="doc-note" id="char-top-2">
+                  <h4><span class="doc-step-badge">2</span> Character identity and hero data</h4>
+                  <p>The hero area contains the main character form, the core readings, the modern and source radicals, and the relevant stroke counts.</p>
+                </section>
+                <section class="doc-note" id="char-top-3">
+                  <h4><span class="doc-step-badge">3</span> Readings and definitions table</h4>
+                  <p>This table gathers the attested readings, their labels, the English orientation gloss, the Latin definition, and the loci from which the information is drawn.</p>
+                </section>
+                <section class="doc-note" id="char-top-4">
+                  <h4><span class="doc-step-badge">4</span> Relationship map</h4>
+                  <p>The graph visualises lexical relations such as synonyms, variants and compounds, offering a compact conceptual map of the character’s network.</p>
+                </section>
+                <section class="doc-note" id="char-top-5">
+                  <h4><span class="doc-step-badge">5</span> Navigation and citation tools</h4>
+                  <p>The upper-right controls provide neighbouring-record navigation as well as stable-link and export actions.</p>
+                </section>
+              </div>
+            </div>
+
+            <div class="doc-subgroup" id="character-bottom">
+              <h3>Lower section</h3>
+              <p>The lower half of the page concentrates the denser supporting material: compounds, graphic history, documentary loci, and notes.</p>
+              <DocumentationFigure
+                src="/images/chind/documentation/character-detail-bottom.png"
+                alt="Annotated example of the lower part of a character record"
+                caption="The lower section stores the most specialised material and makes it traceable back to the documentary evidence."
+                callouts={characterBottomCallouts}
+                topGutter="76px"
+                bottomGutter="68px"
+              />
+              <div class="doc-notes">
+                <section class="doc-note" id="char-bottom-1">
+                  <h4><span class="doc-step-badge">1</span> Polysyllabic constructions</h4>
+                  <p>This panel records disyllabic or polysyllabic constructions associated with the character and serves as the experimental entry point for compound reconstruction.</p>
+                </section>
+                <section class="doc-note" id="char-bottom-2">
+                  <h4><span class="doc-step-badge">2</span> Graphic forms and indexing</h4>
+                  <p>Here the reader finds the standard and variant forms of the character, radical information, phonetic component, and the indexing data required for search and comparison.</p>
+                </section>
+                <section class="doc-note" id="char-bottom-3">
+                  <h4><span class="doc-step-badge">3</span> Documentary evidence</h4>
+                  <p>The documentary-evidence table brings together loci, readings, typology, Latin definition, source radical, strokes, and contextual links back to the dictionary browser.</p>
+                </section>
+                <section class="doc-note" id="char-bottom-4">
+                  <h4><span class="doc-step-badge">4</span> Notes and sources</h4>
+                  <p>The final panel is reserved for descriptive notes and external references associated with the character record.</p>
+                </section>
+              </div>
+            </div>
+          </section>
+
+          <section class="doc-section" id="credits">
+            <h2>Credits</h2>
+            <p class="doc-lead">
+              The Credits page lists the research team, the institutional partners, and the project identifiers.
+              It is designed as a compact institutional profile of the digital edition and can easily accommodate future profile images or updated roles.
+            </p>
+            <div class="doc-simple-grid">
+              <div class="doc-simple-card">
+                <h3>Project roles</h3>
+                <p>
+                  The central cards are organised hierarchically, distinguishing the Principal Investigator, Project Leads, Content Leads,
+                  and the Digital Infrastructure profile.
+                </p>
+              </div>
+              <div class="doc-simple-card">
+                <h3>Institutional frame</h3>
+                <p>
+                  The lower institutional bar gathers the participating universities, the LAD laboratory, and the formal references to the PRIN PNRR project.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <footer class="doc-footer">
+            Documentation page prepared for the local CHIND development environment. All texts are editorial guidance and can be expanded or refined in later stages.
+          </footer>
+        </article>
+      </div>
+    </main>
+  </body>
+</html>

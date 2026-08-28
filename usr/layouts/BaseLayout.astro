@@ -1,0 +1,115 @@
+---
+import "../styles/global.css"
+import SEO from "../../core/components/SEO/SEO.astro"
+import { siteMetadata } from "../user.config.mjs"
+import packageJson from "../../package.json"
+
+import BSNavbar from "../../core/components/BSNavbar.tsx"
+import { getEntry } from 'astro:content'
+
+interface Props {
+  title?: string
+  description?: string
+}
+
+const { title = siteMetadata.title, description = siteMetadata.description } =
+  Astro.props
+
+const currentPath = Astro.url.pathname
+const menuEntry = await getEntry('menu', 'menu')
+const menuItems = menuEntry?.data ?? []
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <SEO title={title} description={description} siteMetadata={siteMetadata} />
+    <link rel="icon" type="image/png" href="/images/favicon.png" />
+    <!-- Preload critical fonts for better performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <slot name="head" />
+  </head>
+
+  <body class="d-flex flex-column min-vh-100">
+    <BSNavbar
+      client:load
+      menuItems={menuItems}
+      currentPath={currentPath}
+      cssClasses={{
+        nav: "bg-body-tertiary navbar-expand-md sticky-top shadow-sm border-bottom",
+        ul: "ms-auto mb-2 mb-md-0",
+        li: "text-center fw-medium",
+      }}
+      brand={{
+        text: siteMetadata.title,
+        link: "/",
+        cssClasses: "fw-bold",
+      }}
+    />
+
+
+    <main
+      class="container flex-grow-1"
+      style="padding-top: 6rem; padding-bottom: 3rem;"
+    >
+      <slot />
+    </main>
+
+    <!-- Enhanced Footer with modern academic styling -->
+    <footer class="py-5 mt-auto border-top bg-light">
+      <div class="container">
+        <div class="p-4">
+          <div class="d-flex align-items-center">
+            <img
+              alt="s:CMS & LAD Logo"
+              src="/images/scms-lad.png"
+              class="img-fluid"
+              style="max-height: 80px; margin-right: 1rem;"
+            />
+            <div class="ps-md-4 border-start">
+              <h3>
+                s:CMS <small class="text-muted">(v{packageJson.version})</small>
+              </h3>
+              <p>
+                A project by
+                <a
+                  href="https://lad.saras.uniroma1.it"
+                  target="_blank"
+                  rel="noreferrer"
+                  class="fw-medium"
+                >
+                  LAD: Laboratorio di Archeologia Digitale alla Sapienza
+                </a>
+              </p>
+              <div class="d-flex gap-3 flex-wrap">
+                <a
+                  href="https://github.com/lad-sapienza/sCMS"
+                  target="_blank"
+                  rel="noreferrer"
+                  class="btn btn-sm btn-outline-primary"
+                >
+                  Code
+                </a>
+                <a
+                  href="https://github.com/lad-sapienza/sCMS/issues"
+                  target="_blank"
+                  rel="noreferrer"
+                  class="btn btn-sm btn-outline-primary"
+                >
+                  Issues
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      defer
+      is:inline></script>
+  </body>
+</html>

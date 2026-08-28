@@ -1,0 +1,34 @@
+---
+import SEO from '../../core/components/SEO/SEO.astro';
+import { siteMetadata } from '../user.config.mjs';
+import ChindTopNav from '../components/chind/ChindTopNav.astro';
+import TextComparison from '../components/text-comparison/TextComparison';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <SEO
+      title="Text comparison · CHIND"
+      description="Compare an external Chinese text with characters, historical glyphs, graphic variants and disyllabic units recorded in CHIND."
+      siteMetadata={siteMetadata}
+    />
+    <link rel="icon" type="image/png" href="/images/favicon.png" />
+    <style is:global>
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body { min-width: 320px; min-height: 100%; margin: 0; }
+      body {
+        background:
+          radial-gradient(circle at 82% 6%, rgba(63, 122, 105, .14), transparent 30rem),
+          #052c27;
+      }
+      a { color: inherit; }
+      button, textarea, input { font: inherit; }
+    </style>
+  </head>
+  <body>
+    <ChindTopNav />
+    <TextComparison client:load />
+  </body>
+</html>

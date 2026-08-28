@@ -1,0 +1,132 @@
+---
+/**
+ * SEO Component for Astro
+ * Based on the original sCMS SEO implementation
+ * 
+ * This component generates meta tags and structured data for SEO
+ */
+
+interface SiteMetadata {
+  title: string;
+  titleTemplate?: string;
+  description: string;
+  defaultImage?: string;
+  siteName?: string;
+  twitter?: string;
+  author?: string;
+}
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  author?: string;
+  isArticle?: boolean;
+  datePublished?: string | Date;
+  dateModified?: string | Date;
+  tags?: string[];
+  canonical?: string;
+  siteMetadata?: SiteMetadata;
+}
+
+const {
+  title,
+  description,
+  image,
+  author,
+  isArticle = false,
+  datePublished,
+  dateModified,
+  tags = [],
+  canonical,
+  siteMetadata,
+} = Astro.props;
+
+// Get site metadata from props or use defaults
+const meta = siteMetadata || {
+  title: 's:CMS',
+  description: 'Static Content Management System',
+  defaultImage: '/images/scms-lad.png',
+  siteName: 'LAD: Laboratorio di Archeologia Digitale alla Sapienza',
+  twitter: '@JulianBogdani',
+};
+
+// Get site URL
+const siteUrl = Astro.site?.toString() || 'https://example.com';
+const currentUrl = canonical || new URL(Astro.url.pathname, siteUrl).toString();
+
+// Resolve values
+const resolvedTitle = title || meta.title;
+const resolvedDescription = description || meta.description;
+const resolvedImage = image ? new URL(image, siteUrl).toString() : (meta.defaultImage ? new URL(meta.defaultImage, siteUrl).toString() : undefined);
+const pageTitle = meta.titleTemplate ? meta.titleTemplate.replace('%s', resolvedTitle) : resolvedTitle;
+
+// Format dates
+const formatDate = (date?: string | Date) => {
+  if (!date) return null;
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d ? d.toISOString() : '';
+};
+
+const pubDate = formatDate(datePublished);
+const modDate = formatDate(dateModified);
+
+// Build Article JSON-LD for structured data
+const articleJsonLd = isArticle ? {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  mainEntityOfPage: {
+    '@type': 'WebPage',
+    '@id': currentUrl,
+  },
+  headline: resolvedTitle,
+  description: resolvedDescription,
+  image: resolvedImage ? [resolvedImage] : [],
+  author: author ? [{ '@type': 'Person', name: author }] : (meta.author ? [{ '@type': 'Person', name: meta.author }] : []),
+  publisher: {
+    '@type': 'Organization',
+    name: meta.siteName || meta.title,
+    logo: {
+      '@type': 'ImageObject',
+      url: meta.defaultImage ? new URL(meta.defaultImage, siteUrl).toString() : undefined,
+    },
+  },
+  datePublished: pubDate,
+  dateModified: modDate,
+  keywords: tags.length ? tags.join(', ') : undefined,
+} : null;
+---
+
+<!-- Primary Meta Tags -->
+<title>{pageTitle}</title>
+<meta name="title" content={resolvedTitle} />
+<meta name="description" content={resolvedDescription} />
+<link rel="canonical" href={currentUrl} />
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content={isArticle ? 'article' : 'website'} />
+<meta property="og:url" content={currentUrl} />
+<meta property="og:title" content={resolvedTitle} />
+<meta property="og:description" content={resolvedDescription} />
+<meta property="og:site_name" content={meta.siteName || meta.title} />
+{resolvedImage && <meta property="og:image" content={resolvedImage} />}
+
+<!-- Twitter -->
+<meta property="twitter:card" content={resolvedImage ? 'summary_large_image' : 'summary'} />
+<meta property="twitter:url" content={currentUrl} />
+<meta property="twitter:title" content={resolvedTitle} />
+<meta property="twitter:description" content={resolvedDescription} />
+{resolvedImage && <meta property="twitter:image" content={resolvedImage} />}
+{meta.twitter && <meta name="twitter:site" content={meta.twitter} />}
+{meta.twitter && <meta name="twitter:creator" content={meta.twitter} />}
+
+<!-- Article Metadata -->
+{isArticle && author && <meta name="author" content={author} />}
+{isArticle && pubDate && <meta property="article:published_time" content={pubDate} />}
+{isArticle && modDate && <meta property="article:modified_time" content={modDate} />}
+{isArticle && tags.map(tag => <meta property="article:tag" content={tag} />)}
+
+<!-- Structured Data -->
+{articleJsonLd && (
+  <script type="application/ld+json" set:html={JSON.stringify(articleJsonLd)} is:inline />
+)}

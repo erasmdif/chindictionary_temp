@@ -1,0 +1,24 @@
+# Git merge strategies for s:CMS core updates
+
+# Core framework files - prefer upstream (theirs) during updates  
+core/** merge=theirs
+scripts/** merge=theirs
+
+# Package files - prefer upstream, user customizes via usr/user.config.mjs
+package.json merge=theirs
+package-lock.json merge=theirs
+astro.config.mjs merge=theirs
+tailwind.config.js merge=theirs
+tsconfig.json merge=theirs
+
+# User files - preserve local customizations (ours)
+usr/** merge=ours
+usr/**/* merge=ours
+
+# Exception: allow template/demo files to be updated
+usr/pages/*demo*.mdx merge=theirs
+usr/components/Example.astro merge=theirs
+
+# User configuration should always be preserved
+usr/user.config.mjs merge=ours
+src/usr/** merge=ours

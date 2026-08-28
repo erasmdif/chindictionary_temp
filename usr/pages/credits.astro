@@ -1,0 +1,125 @@
+---
+import CharactersLayout from '../layouts/CharactersLayout.astro';
+import PersonCard from '../components/credits/PersonCard.astro';
+import '../components/credits/credits.css';
+
+const institutions = [
+  {
+    name: 'Sapienza Università di Roma',
+    logo: '/images/chind/credits/institutions/sapienza.svg',
+    className: 'sapienza',
+  },
+  {
+    name: `Università degli Studi di Napoli “L’Orientale”`,
+    logo: '/images/chind/credits/institutions/orientale.svg',
+    className: 'orientale',
+  },
+  {
+    name: 'Università degli Studi della Tuscia',
+    logo: '/images/chind/credits/institutions/unitus.svg',
+    className: 'unitus',
+  },
+  {
+    name: 'Università degli Studi di Perugia',
+    logo: '/images/chind/credits/institutions/unipg.svg',
+    className: 'unipg',
+  },
+  {
+    name: 'LAD · Laboratorio di Archeologia Digitale, Sapienza Università di Roma',
+    logo: '/images/chind/credits/institutions/lad.png',
+    className: 'lad',
+  },
+];
+---
+<CharactersLayout
+  title="Credits — CHIND"
+  description="Project team, institutions and project references for CHIND — Dictionarium Sinico–Latinum."
+>
+  <main class="credits-page">
+    <div class="credits-paper">
+      <header class="credits-hero">
+        <div>
+          <p class="credits-kicker"><span>PROJECT</span><i>/</i><strong>CREDITS</strong></p>
+          <h1>Credits</h1>
+          <p class="credits-subtitle">CHIND · Dictionarium Sinico–Latinum</p>
+        </div>
+
+        <aside class="credits-project-ref" aria-label="Project reference">
+          <span class="credits-ref-label">PRIN PNRR 2022</span>
+          <p>“CHIN-DICTIONARY - Brollo’s <i>Dictionarium sinico-latinum</i>: linguistic innovations, textual connections, and trans-cultural translation”</p>
+          <dl>
+            <div><dt>Project code</dt><dd>P2022XBX35</dd></div>
+            <div><dt>CUP</dt><dd>B53D23029330001</dd></div>
+          </dl>
+        </aside>
+      </header>
+
+      <div class="credits-section-heading" aria-hidden="true">
+        <span></span><h2>PROJECT TEAM</h2><span></span>
+      </div>
+
+      <section class="credits-team-section credits-pi" aria-labelledby="credits-pi-title">
+        <h2 id="credits-pi-title">PROJECT P.I.</h2>
+        <PersonCard
+          name="Gabriele Tola"
+          role="Associate Professor"
+          department="Department of Humanities, Ancient and Modern Languages, Literature and Cultures"
+          institution="Università degli Studi di Perugia"
+          email="gabriele.tola@unipg.it"
+          featured={true}
+        />
+      </section>
+
+      <section class="credits-team-section" aria-labelledby="credits-leads-title">
+        <h2 id="credits-leads-title">PROJECT LEADS</h2>
+        <div class="credits-card-grid two">
+          <PersonCard
+            name="Victoria Almonte"
+            role="Associate Professor"
+            institution="Università degli Studi della Tuscia"
+            email="victoria_almonte@unitus.it"
+          />
+          <PersonCard
+            name="Emanuele Raini"
+            role="Researcher"
+            institution={`Università degli Studi di Napoli “L’Orientale”`}
+            email="eraini@unior.it"
+          />
+        </div>
+      </section>
+
+      <section class="credits-team-section" aria-labelledby="credits-content-title">
+        <h2 id="credits-content-title">CONTENT LEADS</h2>
+        <div class="credits-card-grid four">
+          <PersonCard name="Erica Cecchetti" role="Content Lead" compact={true} />
+          <PersonCard name="Silvana Maiello" role="Content Lead" compact={true} />
+          <PersonCard name="Mattia Marconi" role="Content Lead" compact={true} />
+          <PersonCard name="Chen Ya" role="Content Lead" compact={true} />
+        </div>
+      </section>
+
+      <section class="credits-team-section credits-digital" aria-labelledby="credits-digital-title">
+        <h2 id="credits-digital-title">DIGITAL INFRASTRUCTURE</h2>
+        <div class="credits-card-grid single">
+          <PersonCard name="Erasmo di Fonso" role="Digital Infrastructure" />
+        </div>
+      </section>
+
+      <section class="credits-institutions" aria-labelledby="credits-institutions-title">
+        <div class="credits-institutions-head">
+          <p>INSTITUTIONS &amp; RESEARCH INFRASTRUCTURE</p>
+          <h2 id="credits-institutions-title">Institutions involved</h2>
+        </div>
+
+        <div class="credits-logo-grid">
+          {institutions.map((item) => (
+            <figure class:list={["credits-logo", item.className]}>
+              <div class="credits-logo-image"><img src={item.logo} alt={item.name} loading="lazy" /></div>
+              <figcaption>{item.name}</figcaption>
+            </figure>
+          ))}
+        </div>
+      </section>
+    </div>
+  </main>
+</CharactersLayout>

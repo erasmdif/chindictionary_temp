@@ -1,0 +1,7 @@
+---
+import CharactersLayout from '../../layouts/CharactersLayout.astro';
+import CharacterRecordView from '../../components/characters/CharacterRecordView';
+---
+<CharactersLayout title="Character record — Dictionarium Sinico–Latinum" description="Character readings, documentary definitions, lexical relations, variants and dictionary attestations.">
+  <CharacterRecordView client:load />
+</CharactersLayout>

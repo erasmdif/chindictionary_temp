@@ -1,0 +1,7 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import OccurrenceView from '../../components/dictionary/OccurrenceView';
+---
+<BaseLayout title="Dictionary occurrence" description="Detailed view of a dictionary occurrence and its printed-line context.">
+  <OccurrenceView client:load />
+</BaseLayout>

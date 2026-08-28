@@ -1,0 +1,7 @@
+CHIND Text Comparison UI refinement
+===================================
+
+Overwritten (all CHIND-created files):
+- usr/components/text-comparison/TextComparison.tsx
+- usr/components/text-comparison/text-comparison.css
+- usr/pages/documentation.astro

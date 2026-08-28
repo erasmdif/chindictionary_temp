@@ -1,0 +1,115 @@
+---
+/**
+ * Gallery Component - Astro Wrapper
+ * 
+ * SSR wrapper that loads images and passes them to the React Gallery component
+ * Automatically loads images from gallery/ folder in the same directory
+ */
+import { Gallery as GalleryClient } from './Gallery';
+import { sortImages, getFileName, formatFilename, applyCaptions } from './galleryUtils';
+import type { GalleryImage } from './types';
+
+interface Props {
+  path?: string;
+  reverseSorting?: boolean;
+  columns?: {
+    min?: number;
+    max?: number;
+  };
+  className?: string;
+  images?: GalleryImage[];
+}
+
+const props = Astro.props;
+const { path, reverseSorting = false, columns = { min: 200, max: 1 }, className, images: propImages } = props;
+
+const allImageModules = import.meta.glob(
+  '../../../usr/pages/**/gallery/*.{jpg,jpeg,png,gif,webp,avif,JPG,JPEG,PNG,GIF,WEBP,AVIF}',
+  { eager: true }
+);
+const allContentImageModules = import.meta.glob(
+  '../../../usr/content/**/gallery/*.{jpg,jpeg,png,gif,webp,avif,JPG,JPEG,PNG,GIF,WEBP,AVIF}',
+  { eager: true }
+);
+
+// Load captions.json files
+const captionsModules = import.meta.glob(
+  '../../../usr/pages/**/gallery/captions.json',
+  { eager: true }
+);
+const contentCaptionsModules = import.meta.glob(
+  '../../../usr/content/**/gallery/captions.json',
+  { eager: true }
+);
+
+const currentPagePath = path || Astro.url.pathname;
+const normalizedPagePath = currentPagePath.replace(/\/$/, '');
+
+const autoLoadedImages: GalleryImage[] = [
+  ...Object.entries(allImageModules),
+  ...Object.entries(allContentImageModules),
+]
+  .filter(([filepath]) => {
+    const match = filepath.match(/\/(pages|content)(.+)\/gallery\//);
+    if (!match) return false;
+    return normalizedPagePath === match[2];
+  })
+  .map(([filepath, module]: [string, any]) => {
+    const img = module.default;
+    const filename = getFileName(filepath);
+    return {
+      src: img.src,
+      thumb: img.src,
+      width: img.width,
+      height: img.height,
+      alt: formatFilename(filename),
+      caption: formatFilename(filename)
+    } as GalleryImage;
+  });
+
+// Load custom captions if available
+let customCaptions: Record<string, string> | undefined;
+const captionsPath = [
+  ...Object.keys(captionsModules),
+  ...Object.keys(contentCaptionsModules),
+].find(filepath => {
+  const match = filepath.match(/\/(pages|content)(.+)\/gallery\/captions\.json/);
+  return match && match[2] === normalizedPagePath;
+});
+
+if (captionsPath) {
+  const allCaptionsModules = { ...captionsModules, ...contentCaptionsModules };
+  const captionsModule = allCaptionsModules[captionsPath] as any;
+  customCaptions = captionsModule.default || captionsModule;
+}
+
+const baseImages = (propImages && propImages.length > 0) ? propImages : autoLoadedImages;
+const imagesWithCaptions = applyCaptions(baseImages, customCaptions);
+const finalImages = reverseSorting ? sortImages(imagesWithCaptions, reverseSorting) : imagesWithCaptions;
+---
+
+{finalImages.length > 0 && (
+  <GalleryClient 
+    images={finalImages}
+    columns={columns}
+    className={className}
+    client:idle 
+  />
+)}
+
+<style>
+  .gallery-empty {
+    padding: 2rem;
+    background: #f5f5f5;
+    border-radius: 8px;
+    text-align: center;
+    color: #666;
+  }
+  
+  .gallery-empty code {
+    background: #e0e0e0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+  }
+</style>

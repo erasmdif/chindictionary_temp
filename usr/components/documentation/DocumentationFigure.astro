@@ -1,0 +1,69 @@
+---
+export interface Callout {
+  number: string | number;
+  title: string;
+  href: string;
+  anchorLeft: number;
+  anchorTop: number;
+  boxLeft: number;
+  boxTop: number;
+  boxWidth?: string;
+}
+
+interface Props {
+  src: string;
+  alt: string;
+  caption?: string;
+  callouts?: Callout[];
+  leftGutter?: string;
+  rightGutter?: string;
+  topGutter?: string;
+  bottomGutter?: string;
+}
+
+const {
+  src,
+  alt,
+  caption,
+  callouts = [],
+  leftGutter = '18px',
+  rightGutter = '18px',
+  topGutter = '82px',
+  bottomGutter = '64px',
+} = Astro.props as Props;
+---
+
+<figure class="doc-figure">
+  <div
+    class="doc-figure-stage"
+    style={`--doc-figure-left:${leftGutter}; --doc-figure-right:${rightGutter}; --doc-figure-top:${topGutter}; --doc-figure-bottom:${bottomGutter};`}
+  >
+    <div class="doc-figure-canvas">
+      <img src={src} alt={alt} loading="lazy" />
+
+      <svg class="doc-figure-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        {callouts.map((item) => (
+          <line
+            x1={String(item.anchorLeft)}
+            y1={String(item.anchorTop)}
+            x2={String(item.boxLeft)}
+            y2={String(item.boxTop)}
+          />
+        ))}
+      </svg>
+
+      {callouts.map((item) => (
+        <a
+          href={item.href}
+          class="doc-callout"
+          style={`left:${item.boxLeft}%; top:${item.boxTop}%; --doc-callout-width:${item.boxWidth ?? '12rem'};`}
+        >
+          <span class="doc-callout-badge">{item.number}</span>
+          <span class="doc-callout-text">{item.title}</span>
+        </a>
+      ))}
+    </div>
+  </div>
+
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>

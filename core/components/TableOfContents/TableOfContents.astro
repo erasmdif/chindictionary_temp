@@ -1,0 +1,86 @@
+---
+/**
+ * Table of Contents component that extracts headings from the page
+ * Automatically generates TOC from all headings with IDs in the page
+ */
+
+interface Props {
+  /** Maximum heading level to include (1-6) */
+  maxDepth?: number;
+  /** Minimum heading level to include (1-6) */
+  minDepth?: number;
+  /** Title for the TOC section */
+  title?: string;
+}
+
+const { maxDepth = 3, minDepth = 2, title = "Table of Contents" } = Astro.props;
+
+// Generate unique ID for this TOC instance
+const tocId = `toc-${Math.random().toString(36).substring(7)}`;
+---
+
+<nav id={tocId} class="toc bg-light border border-secondary rounded p-3 mb-4 shadow-sm">
+  <h2 class="h5 mb-3 text-secondary">{title}</h2>
+  <ul class="toc-list small"></ul>
+</nav>
+
+<style>
+  .toc {
+    background-color: var(--bs-light);
+    border-color: var(--bs-secondary);
+  }
+  
+  a.toc-link {
+    color: var(--bs-secondary);
+    text-decoration: none;
+    transition: color 0.15s ease-in-out;
+    display: block;
+    padding: 0.25rem 0;
+  }
+  
+  a.toc-link:hover {
+    color: var(--bs-primary);
+    text-decoration: underline;
+  }
+</style>
+
+<script define:vars={{ tocId, minDepth, maxDepth }} is:inline>
+  // Wait for DOM to be ready
+  document.addEventListener('DOMContentLoaded', () => {
+    const tocElement = document.getElementById(tocId);
+    if (!tocElement) return;
+    
+    const tocList = tocElement.querySelector('.toc-list');
+    if (!tocList) return;
+    
+    // Find all headings with IDs in the document
+    const headingSelector = Array.from({ length: maxDepth - minDepth + 1 }, (_, i) => 
+      `h${minDepth + i}[id]`
+    ).join(', ');
+    
+    const headings = document.querySelectorAll(headingSelector);
+    
+    if (headings.length === 0) {
+      tocElement.style.display = 'none';
+      return;
+    }
+    
+    // Build the TOC
+    headings.forEach((heading) => {
+      // ...existing code...
+      const id = heading.id;
+      const text = heading.textContent || '';
+      
+      const li = document.createElement('li');
+      
+      const a = document.createElement('a');
+      a.href = `#${id}`;
+      a.textContent = text;
+      a.className = 'toc-link';
+      
+      li.appendChild(a);
+      tocList.appendChild(li);
+    });
+  });
+</script>
+

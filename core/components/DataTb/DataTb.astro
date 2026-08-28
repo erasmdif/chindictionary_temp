@@ -1,0 +1,24 @@
+---
+/**
+ * DataTb Astro Wrapper
+ * 
+ * Astro component that wraps the React DataTb component
+ * This file exists for documentation and re-export purposes.
+ * In MDX files, import the React component directly with a hydration directive.
+ * 
+ * Example usage in MDX:
+ * ```jsx
+ * import { DataTb, CsvSource } from '@core/components/DataTb';
+ * 
+ * <DataTb searchable pagination client:idle>
+ *   <CsvSource url="/data.csv" />
+ * </DataTb>
+ * ```
+ */
+
+// Re-export for convenience
+export { DataTb, CsvSource, JsonSource, DirectusSource, ApiSource } from './index';
+export type * from './types';
+---
+
+<slot />

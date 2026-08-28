@@ -1,0 +1,10 @@
+---
+import DictionaryLayout from '../../layouts/DictionaryLayout.astro';
+import DictionaryPageBrowser from '../../components/dictionary/DictionaryPageBrowser';
+---
+<DictionaryLayout
+  title="Dictionarium Sinico–Latinum"
+  description="Page-by-page digital reconstruction of the historical Chinese–Latin dictionary."
+>
+  <DictionaryPageBrowser client:load />
+</DictionaryLayout>

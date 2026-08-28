@@ -1,0 +1,14 @@
+# Site-specific npm packages
+#
+# List any npm packages required by this custom implementation.
+# These are installed automatically at the end of every `npm run update-scms` run,
+# because the upstream update replaces package.json with the core version.
+#
+# Format: one package per line as a YAML list item.
+# Inline comments are supported.
+#
+# Examples:
+# - gsap
+# - d3
+# - @types/d3   # TypeScript types for d3
+# - swiper@11   # pin to a specific version

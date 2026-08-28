@@ -1,0 +1,52 @@
+---
+interface Props {
+  name: string;
+  role?: string;
+  institution?: string;
+  department?: string;
+  email?: string;
+  photo?: string;
+  featured?: boolean;
+  compact?: boolean;
+}
+
+const {
+  name,
+  role,
+  institution,
+  department,
+  email,
+  photo,
+  featured = false,
+  compact = false,
+} = Astro.props;
+
+const initials = name
+  .split(/\s+/)
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((part) => part[0]?.toUpperCase() ?? '')
+  .join('');
+---
+<article class:list={["credits-person", { featured, compact }]}> 
+  <div class="credits-person-photo" aria-label={photo ? `Portrait of ${name}` : `Photo placeholder for ${name}`}>
+    {photo ? (
+      <img src={photo} alt={`Portrait of ${name}`} loading="lazy" />
+    ) : (
+      <span class="credits-person-initials" aria-hidden="true">{initials}</span>
+    )}
+  </div>
+
+  <div class="credits-person-copy">
+    <h3>{name}</h3>
+    {role && <p class="credits-person-role">{role}</p>}
+    {department && <p class="credits-person-detail">{department}</p>}
+    {institution && <p class="credits-person-detail institution">{institution}</p>}
+    {email && (
+      <a class="credits-person-email" href={`mailto:${email}`}>
+        <span aria-hidden="true">✉</span>
+        {email}
+      </a>
+    )}
+  </div>
+</article>

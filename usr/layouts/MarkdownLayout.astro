@@ -1,0 +1,122 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import SEO from '../../core/components/SEO/SEO.astro';
+import { siteMetadata } from '../user.config.mjs';
+
+interface Props {
+  frontmatter: {
+    title: string;
+    description?: string;
+    date?: string | Date;
+    author?: string;
+    tags?: string[];
+  };
+}
+
+const { frontmatter } = Astro.props;
+
+---
+
+<BaseLayout title={frontmatter.title} description={frontmatter.description}>
+  <Fragment slot="head">
+    <SEO 
+      title={frontmatter.title} 
+      description={frontmatter.description}
+      isArticle={true}
+      datePublished={frontmatter.date}
+      author={frontmatter.author}
+      tags={frontmatter.tags}
+      siteMetadata={siteMetadata}
+    />
+  </Fragment>
+  <article class="scms-prose">
+    <header class="mb-5">
+      <h1>{frontmatter.title}</h1>
+    </header>
+    
+    <div class="markdown-content">
+      <slot />
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  .scms-prose {
+    max-width: none;
+    font-size: 1.125rem;
+    line-height: 1.7;
+  }
+  
+  .markdown-content :global(h2) {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-top: 3rem;
+    margin-bottom: 1.5rem;
+    color: var(--bs-dark);
+  }
+  
+  .markdown-content :global(h3) {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    color: var(--bs-gray-800);
+  }
+  
+  .markdown-content :global(p) {
+    margin-bottom: 1.5rem;
+    color: var(--bs-gray-700);
+    line-height: 1.7;
+  }
+  
+  .markdown-content :global(ul), .markdown-content :global(ol) {
+    margin-bottom: 1.5rem;
+    margin-left: 2rem;
+  }
+  
+  .markdown-content :global(li) {
+    margin-bottom: 0.5rem;
+    color: var(--bs-gray-700);
+  }
+  
+  .markdown-content :global(ul li) {
+    list-style-type: disc;
+  }
+  
+  .markdown-content :global(strong) {
+    font-weight: 600;
+    color: var(--bs-dark);
+  }
+  
+  .markdown-content :global(a) {
+    color: var(--bs-primary);
+    text-decoration: none;
+  }
+  
+  .markdown-content :global(a:hover) {
+    color: var(--bs-primary);
+    text-decoration: underline;
+  }
+  
+  .markdown-content :global(code) {
+    background-color: var(--bs-gray-100);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-family: var(--font-mono);
+  }
+  
+  .markdown-content :global(pre) {
+    background-color: var(--bs-gray-900);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+  }
+  
+  .markdown-content :global(pre code) {
+    background-color: transparent;
+    padding: 0;
+  }
+</style>
