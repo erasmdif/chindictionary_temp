@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import type {
   DictionaryPageOccurrence,
   DictionaryPagePayload,
@@ -30,6 +30,30 @@ type SynonymGroup = {
 type Selection =
   | { kind: 'synonym'; group: SynonymGroup }
   | { kind: 'graphic'; item: GraphicVariant; occurrence: DictionaryPageOccurrence };
+
+
+type DictionarySearchEntry = {
+  occurrenceId: string | number | null;
+  page: number;
+  line: string | number | null;
+  wordId: string | number | null;
+  characterId: string | number | null;
+  character: string | null;
+  simplified: string | null;
+  glyphLink: string | null;
+  romanization: string | null;
+  modernRomanization: string | null;
+  simpleRomanization: string | null;
+};
+
+type DictionarySearchPayload = {
+  generatedAt: string;
+  count: number;
+  entries: DictionarySearchEntry[];
+};
+
+let searchIndexCache: DictionarySearchPayload | null = null;
+let searchIndexPromise: Promise<DictionarySearchPayload> | null = null;
 
 function text(value: unknown): string {
   return value == null ? '' : String(value);
@@ -63,6 +87,31 @@ function typologyRank(value: string | null): number {
 function specialDefinition(value: string | null): boolean {
   const clean = normalize(stripHtml(value)).replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
   return clean === 'change radical' || clean === 'empty page';
+}
+
+const EDITORIAL_WORD_IDS = new Set(['249', '9696']);
+const EDITORIAL_SENTINELS = new Set([
+  'null',
+  'change radical',
+  'empty page',
+  'bf change radical',
+  'before change radical',
+  'before radical',
+]);
+
+function editorialToken(value: unknown): string {
+  return normalize(value).replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function specialOccurrence(row: DictionaryPageOccurrence): boolean {
+  if (row.wordId != null && EDITORIAL_WORD_IDS.has(String(row.wordId))) return true;
+  if (specialDefinition(row.latinDefinition)) return true;
+
+  const character = editorialToken(row.character || row.simplified);
+  const romanization = editorialToken(row.romanization);
+  return Boolean(character && romanization
+    && EDITORIAL_SENTINELS.has(character)
+    && EDITORIAL_SENTINELS.has(romanization));
 }
 
 function isPlaceholder(character: string | null): boolean {
@@ -202,7 +251,7 @@ function groupOccurrences(rows: DictionaryPageOccurrence[]): LineGroup[] {
         const role = typologyRank(a.typology) - typologyRank(b.typology);
         return role || naturalCompare(a.id, b.id);
       }),
-      special: occurrences.length > 0 && occurrences.every(row => specialDefinition(row.latinDefinition)),
+      special: occurrences.length > 0 && occurrences.every(specialOccurrence),
       specialReplacement: null as string | null,
     }))
     .sort((a, b) => naturalCompare(a.line, b.line));
@@ -361,22 +410,64 @@ function SlashBreakText({ value }: { value: string }) {
   );
 }
 
-function groupSearchText(group: LineGroup): string {
-  const values: unknown[] = [group.line];
-  for (const row of group.occurrences) {
-    values.push(
-      row.character,
-      row.simplified,
-      row.romanization,
-      row.modernRomanization,
-      stripHtml(row.latinDefinition),
-      row.englishDefinition,
-      ...row.glosses.map(g => g.value),
-      ...row.graphicVariants.flatMap(v => [v.relatedCharacter, v.relatedSimplified]),
-      ...row.synonyms.flatMap(s => [s.relatedCharacter, s.relatedSimplified, s.relatedRomanization, s.assessment]),
-    );
+function foldedSearch(value: unknown): string {
+  return normalize(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[˘¯ˆ^'’`´·]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function searchIndexUrl(): string {
+  const base = import.meta.env.BASE_URL || '/';
+  return `${base.replace(/\/?$/, '/')}data/dictionary/search-index.json`;
+}
+
+async function fetchSearchIndex(): Promise<DictionarySearchPayload> {
+  if (searchIndexCache) return searchIndexCache;
+  if (!searchIndexPromise) {
+    searchIndexPromise = fetch(searchIndexUrl(), { cache: 'force-cache' })
+      .then(async response => {
+        if (!response.ok) throw new Error(`Dictionary search index could not be loaded (HTTP ${response.status}).`);
+        const payload = await response.json() as DictionarySearchPayload;
+        searchIndexCache = payload;
+        return payload;
+      })
+      .finally(() => { searchIndexPromise = null; });
   }
-  return normalize(values.filter(Boolean).join(' '));
+  return searchIndexPromise;
+}
+
+function searchScore(entry: DictionarySearchEntry, rawQuery: string): number | null {
+  const query = normalize(rawQuery);
+  const foldedQuery = foldedSearch(rawQuery);
+  if (!query) return null;
+
+  const characterValues = [entry.character, entry.simplified].filter(Boolean).map(value => normalize(value));
+  const romanValues = [entry.romanization, entry.modernRomanization, entry.simpleRomanization]
+    .filter(Boolean)
+    .map(value => normalize(value));
+  const foldedRomanValues = [entry.romanization, entry.modernRomanization, entry.simpleRomanization]
+    .filter(Boolean)
+    .map(foldedSearch);
+
+  if (characterValues.some(value => value === query)) return 0;
+  if (romanValues.some(value => value === query)) return 1;
+  if (characterValues.some(value => value.startsWith(query))) return 2;
+  if (romanValues.some(value => value.startsWith(query))) return 3;
+  if (characterValues.some(value => value.includes(query))) return 4;
+  if (romanValues.some(value => value.includes(query))) return 5;
+  if (foldedQuery && foldedRomanValues.some(value => value === foldedQuery)) return 6;
+  if (foldedQuery && foldedRomanValues.some(value => value.startsWith(foldedQuery))) return 7;
+  if (foldedQuery && foldedRomanValues.some(value => value.includes(foldedQuery))) return 8;
+  return null;
+}
+
+function searchGlyph(entry: DictionarySearchEntry): string {
+  return isPlaceholder(entry.character)
+    ? `${entry.simplified || entry.character || '—'}*`
+    : (entry.character || entry.simplified || '—');
 }
 
 function primaryOccurrence(group: LineGroup): DictionaryPageOccurrence | undefined {
@@ -452,6 +543,11 @@ export default function DictionaryPageBrowser() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [pageDraft, setPageDraft] = useState('1');
+  const [searchIndex, setSearchIndex] = useState<DictionarySearchPayload | null>(searchIndexCache);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [historicalStrokesFilter, setHistoricalStrokesFilter] = useState('');
   const [modernStrokesFilter, setModernStrokesFilter] = useState('');
@@ -459,14 +555,19 @@ export default function DictionaryPageBrowser() {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [activeLine, setActiveLine] = useState<string>('');
   const [locationReady, setLocationReady] = useState(false);
-  const deferredQuery = useDeferredValue(normalize(query.trim()));
+  const deferredQuery = useDeferredValue(query.trim());
 
   useEffect(() => {
     const initial = pageFromLocation();
     setRequestedPage(initial);
+    setPageDraft(String(initial));
     setLocationReady(true);
 
-    const onPopState = () => setRequestedPage(pageFromLocation());
+    const onPopState = () => {
+      const next = pageFromLocation();
+      setRequestedPage(next);
+      setPageDraft(String(next));
+    };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
@@ -481,7 +582,6 @@ export default function DictionaryPageBrowser() {
       .then(next => {
         setPayload(next);
         setLoading(false);
-        setQuery('');
         setHistoricalStrokesFilter('');
         setModernStrokesFilter('');
         setTypologyFilter('');
@@ -524,6 +624,29 @@ export default function DictionaryPageBrowser() {
     return () => controller.abort();
   }, [requestedPage, locationReady]);
 
+  useEffect(() => {
+    setPageDraft(String(requestedPage));
+  }, [requestedPage]);
+
+  useEffect(() => {
+    if (!deferredQuery || searchIndex) return;
+    let active = true;
+    setSearchLoading(true);
+    setSearchError(null);
+    fetchSearchIndex()
+      .then(next => {
+        if (!active) return;
+        setSearchIndex(next);
+        setSearchLoading(false);
+      })
+      .catch(err => {
+        if (!active) return;
+        setSearchError(err instanceof Error ? err.message : String(err));
+        setSearchLoading(false);
+      });
+    return () => { active = false; };
+  }, [deferredQuery, searchIndex]);
+
   const groups = useMemo(() => groupOccurrences(payload?.data ?? []), [payload]);
   const filterOptions = useMemo(() => {
     const data = payload?.data ?? [];
@@ -536,13 +659,24 @@ export default function DictionaryPageBrowser() {
 
   const visibleGroups = useMemo(() => {
     return groups.filter(group => {
-      if (deferredQuery && !groupSearchText(group).includes(deferredQuery)) return false;
       if (historicalStrokesFilter && !group.occurrences.some(row => text(row.historicalStrokes) === historicalStrokesFilter)) return false;
       if (modernStrokesFilter && !group.occurrences.some(row => text(row.modernStrokes) === modernStrokesFilter)) return false;
       if (typologyFilter && !group.occurrences.some(row => text(row.typology) === typologyFilter)) return false;
       return true;
     });
-  }, [groups, deferredQuery, historicalStrokesFilter, modernStrokesFilter, typologyFilter]);
+  }, [groups, historicalStrokesFilter, modernStrokesFilter, typologyFilter]);
+
+  const searchMatches = useMemo(() => {
+    if (!deferredQuery || !searchIndex) return { total: 0, entries: [] as DictionarySearchEntry[] };
+    const scored = searchIndex.entries
+      .map(entry => ({ entry, score: searchScore(entry, deferredQuery) }))
+      .filter((item): item is { entry: DictionarySearchEntry; score: number } => item.score != null)
+      .sort((a, b) => a.score - b.score
+        || a.entry.page - b.entry.page
+        || naturalCompare(a.entry.line, b.entry.line)
+        || naturalCompare(a.entry.romanization, b.entry.romanization));
+    return { total: scored.length, entries: scored.slice(0, 30).map(item => item.entry) };
+  }, [deferredQuery, searchIndex]);
 
   const pageMeta = useMemo(() => {
     const source = payload?.data ?? [];
@@ -566,6 +700,43 @@ export default function DictionaryPageBrowser() {
     setRequestedPage(next);
   }
 
+  function navigateToLocus(page: number, line: string | number | null) {
+    const max = payload?.maxPage ?? Number.POSITIVE_INFINITY;
+    const next = Math.max(1, Math.min(page, max));
+    const lineValue = line == null ? '' : String(line);
+    const url = new URL(window.location.href);
+    if (next === 1) url.searchParams.delete('page');
+    else url.searchParams.set('page', String(next));
+    if (lineValue) url.searchParams.set('line', lineValue);
+    else url.searchParams.delete('line');
+    window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    setQuery('');
+    setSearchOpen(false);
+
+    if (next !== requestedPage) {
+      setRequestedPage(next);
+      return;
+    }
+
+    if (lineValue) {
+      setActiveLine(lineValue);
+      window.setTimeout(() => {
+        document.getElementById(`dsl-line-${encodeURIComponent(lineValue)}`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 0);
+    }
+  }
+
+  function submitPageJump(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const value = Number(pageDraft);
+    if (!Number.isInteger(value) || value < 1) {
+      setPageDraft(String(requestedPage));
+      return;
+    }
+    navigate(value);
+  }
+
   function focusLine(lineKey: string) {
     setActiveLine(lineKey);
     const node = document.getElementById(`dsl-line-${encodeURIComponent(lineKey)}`);
@@ -578,7 +749,20 @@ export default function DictionaryPageBrowser() {
     <div className="dsl-app">
       <div className="dsl-page-toolbar" aria-label="Dictionary page controls">
         <div className="dsl-page-tools">
-          <span className="dsl-page-label">Page {requestedPage}</span>
+          <form className="dsl-page-label dsl-page-jump" onSubmit={submitPageJump} title="Type a page number and press Enter">
+            <span>Page</span>
+            <input
+              type="number"
+              min={1}
+              max={maxPage ?? undefined}
+              inputMode="numeric"
+              value={pageDraft}
+              onChange={event => setPageDraft(event.target.value)}
+              onFocus={event => event.currentTarget.select()}
+              onBlur={() => { if (!pageDraft) setPageDraft(String(requestedPage)); }}
+              aria-label="Go directly to dictionary page"
+            />
+          </form>
           <button
             type="button"
             className="dsl-icon-button"
@@ -593,15 +777,52 @@ export default function DictionaryPageBrowser() {
             disabled={Boolean(maxPage && requestedPage >= maxPage) || loading}
             aria-label="Next dictionary page"
           >›</button>
-          <label className="dsl-search">
-            <span aria-hidden="true">⌕</span>
-            <input
-              value={query}
-              onChange={event => setQuery(event.target.value)}
-              placeholder="Search Chinese, Latin, reading…"
-              aria-label="Search within current dictionary page"
-            />
-          </label>
+          <div className="dsl-search-wrap">
+            <label className="dsl-search">
+              <span aria-hidden="true">⌕</span>
+              <input
+                value={query}
+                onChange={event => { setQuery(event.target.value); setSearchOpen(true); }}
+                onFocus={() => { if (query.trim()) setSearchOpen(true); }}
+                onBlur={() => window.setTimeout(() => setSearchOpen(false), 140)}
+                placeholder="Search character or romanisation…"
+                aria-label="Search characters and romanisations across the whole dictionary"
+                aria-expanded={Boolean(searchOpen && deferredQuery)}
+                aria-controls="dsl-global-search-results"
+                autoComplete="off"
+              />
+            </label>
+            {searchOpen && deferredQuery ? (
+              <div className="dsl-search-results" id="dsl-global-search-results" role="listbox">
+                <div className="dsl-search-results-head">
+                  <span>ALL PAGES</span>
+                  {!searchLoading && !searchError && searchIndex ? <small>{searchMatches.total} matches</small> : null}
+                </div>
+                {searchLoading ? <div className="dsl-search-state">Loading dictionary index…</div> : null}
+                {searchError ? <div className="dsl-search-state error">{searchError}</div> : null}
+                {!searchLoading && !searchError && searchIndex && searchMatches.entries.length === 0 ? (
+                  <div className="dsl-search-state">No matching character or romanisation.</div>
+                ) : null}
+                {!searchLoading && !searchError ? searchMatches.entries.map((entry, index) => (
+                  <button
+                    type="button"
+                    className="dsl-search-result"
+                    key={`${entry.page}-${entry.line ?? ''}-${entry.wordId ?? index}`}
+                    role="option"
+                    onMouseDown={event => event.preventDefault()}
+                    onClick={() => navigateToLocus(entry.page, entry.line)}
+                  >
+                    <strong>{searchGlyph(entry)}</strong>
+                    <span className="dsl-search-result-reading">{entry.romanization || entry.modernRomanization || entry.simpleRomanization || '—'}</span>
+                    <span className="dsl-search-result-locus">p. {entry.page}{entry.line != null && text(entry.line) ? ` · l. ${entry.line}` : ''}</span>
+                  </button>
+                )) : null}
+                {!searchLoading && !searchError && searchMatches.total > searchMatches.entries.length ? (
+                  <div className="dsl-search-more">Showing first {searchMatches.entries.length} of {searchMatches.total} matches.</div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -858,7 +1079,7 @@ export default function DictionaryPageBrowser() {
             })}
 
             {!loading && !error && visibleGroups.length === 0 && (
-              <div className="dsl-message">No matching lines on page {requestedPage}.</div>
+              <div className="dsl-message">No lines match the active page filters on page {requestedPage}.</div>
             )}
 
             {loading && <div className="dsl-loading"><span /> Loading page {requestedPage}…</div>}

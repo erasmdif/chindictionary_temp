@@ -1,22 +1,3 @@
-CHIND temporary GitHub Pages deployment patch
-==============================================
-
-New:
-- astro.github.config.mjs
-- scripts/check-build-secrets.mjs
-- usr/components/chind/paths.ts
-
-Updated:
-- .github/workflows/deploy.yml
-- usr/components/chind/ChindTopNav.astro
-- usr/layouts/HomeLayout.astro
-- usr/layouts/DictionaryLayout.astro
-- usr/pages/index.md
-- usr/pages/credits.astro
-- usr/pages/documentation.astro
-- usr/pages/text-comparison.astro
-- usr/components/characters/CharacterExplorer.tsx
-- usr/components/characters/CharacterRecordView.tsx
-- usr/components/text-comparison/TextComparison.tsx
-
-Original core sCMS files are not modified.
+MODIFY usr/components/dictionary/DictionaryPageBrowser.tsx
+MODIFY usr/components/dictionary/dictionary-page.css
+ADD    usr/pages/data/dictionary/search-index.json.ts
