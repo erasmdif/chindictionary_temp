@@ -1,3 +1,1 @@
-MODIFY usr/components/dictionary/DictionaryPageBrowser.tsx
-MODIFY usr/components/dictionary/dictionary-page.css
-ADD    usr/pages/data/dictionary/search-index.json.ts
+usr/pages/index.md

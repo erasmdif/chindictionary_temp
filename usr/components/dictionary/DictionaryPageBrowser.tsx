@@ -1,6 +1,10 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import type {
+  AntinomyRelation,
+  AntinomyTerm,
+  CompositeSyllable,
+  CompositeWordRelation,
   DictionaryPageOccurrence,
   DictionaryPagePayload,
   GraphicVariant,
@@ -20,6 +24,9 @@ type LineGroup = {
 };
 
 type SynonymCandidate = { item: SynonymRelation; occurrence: DictionaryPageOccurrence };
+
+type AntinomyCandidate = { item: AntinomyRelation; occurrence: DictionaryPageOccurrence };
+type CompositeCandidate = { item: CompositeWordRelation; occurrence: DictionaryPageOccurrence };
 
 type SynonymGroup = {
   position: string;
@@ -351,6 +358,173 @@ function synonymCandidateSets(group: SynonymGroup) {
   return { picks: candidates.slice(0, 1), alternatives: candidates.slice(1) };
 }
 
+
+function isAntinomyOccurrence(row: DictionaryPageOccurrence): boolean {
+  return normalize(row.typology) === 'antinomy';
+}
+
+function antinomiesForGroup(group: LineGroup): AntinomyCandidate[] {
+  const seen = new Set<string>();
+  const out: AntinomyCandidate[] = [];
+
+  for (const occurrence of group.occurrences) {
+    for (const item of occurrence.antinomies ?? []) {
+      const relationKey = [
+        item.relationId,
+        item.left.wordId,
+        item.right.wordId,
+      ].map(text).join('|');
+      if (seen.has(relationKey)) continue;
+      seen.add(relationKey);
+      out.push({ item, occurrence });
+    }
+  }
+
+  return out;
+}
+
+function blankAntinomyDefinition(value: string | null): boolean {
+  const clean = normalize(stripHtml(value)).replace(/\s+/g, ' ').trim();
+  return !clean || clean === 'empty' || clean === 'null' || clean === 'nan';
+}
+
+function antinomyDefinitions(group: LineGroup): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const row of group.occurrences) {
+    const value = row.latinDefinition;
+    if (blankAntinomyDefinition(value)) continue;
+    const key = text(value);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(key);
+  }
+  return out;
+}
+
+function antinomyTermReading(term: AntinomyTerm): string {
+  return term.romanization || term.modernRomanization || term.simpleRomanization || '—';
+}
+
+function AntinomyTermCard({ term }: { term: AntinomyTerm }) {
+  return (
+    <div className="dsl-ant-term">
+      <span className="dsl-ant-glyph">
+        {recordGlyph(term.characterId, term.character, term.simplified, term.glyphLink)}
+      </span>
+      <em>{antinomyTermReading(term)}</em>
+    </div>
+  );
+}
+
+function UnderRevisionCard() {
+  return (
+    <div className="dsl-ant-revision" title="The manuscript contains a lexical item here, but its stable database relation has not yet been encoded.">
+      <span>UNDER REVISION</span>
+      <small>relation not yet resolved</small>
+    </div>
+  );
+}
+
+
+function isCompositeOccurrence(row: DictionaryPageOccurrence): boolean {
+  return normalize(row.typology) === 'composti';
+}
+
+function blankCompositeDefinition(value: string | null): boolean {
+  const clean = normalize(stripHtml(value)).replace(/\s+/g, ' ').trim();
+  return !clean || clean === 'empty' || clean === 'null' || clean === 'nan';
+}
+
+function compositesForOccurrence(occurrence: DictionaryPageOccurrence): CompositeCandidate[] {
+  return [...(occurrence.composites ?? [])]
+    .sort((a, b) => naturalCompare(a.compositeId, b.compositeId))
+    .map(item => ({ item, occurrence }));
+}
+
+function unresolvedWordReference(value: unknown): boolean {
+  const clean = normalize(value).trim();
+  return !clean || clean === 'null' || clean === 'nan';
+}
+
+function compositeSlots(group: LineGroup): Array<{ occurrence: DictionaryPageOccurrence | null; item: CompositeWordRelation | null; blank: boolean; unresolved: boolean }> {
+  const sorted = [...group.occurrences].sort((a, b) => naturalCompare(a.id, b.id));
+  return [0, 1].map(index => {
+    const occurrence = sorted[index] ?? null;
+    if (!occurrence) return { occurrence: null, item: null, blank: true, unresolved: false };
+    const blank = blankCompositeDefinition(occurrence.latinDefinition);
+    const item = blank ? null : compositesForOccurrence(occurrence)[0]?.item ?? null;
+    const unresolved = !blank && (!item || unresolvedWordReference(item.second?.wordId));
+    return { occurrence, item, blank, unresolved };
+  });
+}
+
+function compositeFirstSyllable(rows: DictionaryPageOccurrence[]): CompositeSyllable {
+  for (const row of [...rows].sort((a, b) => naturalCompare(a.id, b.id))) {
+    const first = compositesForOccurrence(row)[0]?.item.first;
+    if (first && (first.character || first.simplified || first.romanization)) return first;
+  }
+  return {
+    wordId: null,
+    characterId: null,
+    character: '打',
+    simplified: '打',
+    glyphLink: null,
+    romanizationId: null,
+    romanization: 'ta\\',
+    modernRomanization: null,
+    simpleRomanization: null,
+  };
+}
+
+function compositeReading(term: CompositeSyllable): string {
+  return term.romanization || term.modernRomanization || term.simpleRomanization || '—';
+}
+
+function CompositeTermCard({ term }: { term: CompositeSyllable }) {
+  return (
+    <div className="dsl-comp-term">
+      <span className="dsl-comp-glyph">
+        {recordGlyph(term.characterId, term.character, term.simplified, term.glyphLink)}
+      </span>
+      <em>{compositeReading(term)}</em>
+    </div>
+  );
+}
+
+function isParticulaeNumeralesOccurrence(row: DictionaryPageOccurrence): boolean {
+  return normalize(row.typology) === 'particulae numerales';
+}
+
+function blankParticulaeDefinition(value: string | null): boolean {
+  return blankCompositeDefinition(value);
+}
+
+function occurrenceAsAppendixTerm(occurrence: DictionaryPageOccurrence): CompositeSyllable {
+  return {
+    wordId: occurrence.wordId,
+    characterId: occurrence.characterId,
+    character: occurrence.character,
+    simplified: occurrence.simplified,
+    glyphLink: occurrence.glyphLink,
+    romanizationId: occurrence.romanizationId,
+    romanization: occurrence.romanization,
+    modernRomanization: occurrence.modernRomanization,
+    simpleRomanization: occurrence.simpleRomanization,
+  };
+}
+
+function particulaeSlots(group: LineGroup): Array<{ occurrence: DictionaryPageOccurrence | null; blank: boolean; unresolved: boolean }> {
+  const sorted = [...group.occurrences].sort((a, b) => naturalCompare(a.id, b.id));
+  return [0, 1].map(index => {
+    const occurrence = sorted[index] ?? null;
+    if (!occurrence) return { occurrence: null, blank: true, unresolved: false };
+    const blank = blankParticulaeDefinition(occurrence.latinDefinition);
+    const unresolved = !blank && unresolvedWordReference(occurrence.wordId);
+    return { occurrence, blank, unresolved };
+  });
+}
+
 function positionClass(position: string): string {
   return `pos-${position}`;
 }
@@ -484,9 +658,46 @@ function DefinitionHtml({ html }: { html: string | null }) {
   return <div className="dsl-latin-html" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
+function GlossNoteModal({ note, onClose }: { note: string; onClose: () => void }) {
+  return (
+    <div
+      className="dsl-gloss-note-backdrop"
+      role="presentation"
+      onMouseDown={event => {
+        event.stopPropagation();
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="dsl-gloss-note-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Gloss note"
+        onMouseDown={event => event.stopPropagation()}
+      >
+        <div className="dsl-gloss-note-head">
+          <div>
+            <span className="dsl-gloss-note-kicker">EDITORIAL NOTE</span>
+            <strong>Gloss note</strong>
+          </div>
+          <button type="button" className="dsl-gloss-note-close" onClick={onClose} aria-label="Close gloss note">×</button>
+        </div>
+        <div className="dsl-gloss-note-copy">{note}</div>
+      </div>
+    </div>
+  );
+}
+
 function GlossText({ value }: { value: string }) {
+  const [activeNote, setActiveNote] = useState<string | null>(null);
   const raw = text(value);
-  const marker = /\*{0,3}\s*(?:\((https?:\/\/[^)\s]+)\)|\[(https?:\/\/[^\]\s]+)\])/giu;
+
+  // Two supported editorial syntaxes coexist in the source data:
+  //   *[https://…] / *(https://…)  -> external glyph reference
+  //   *[editorial note] / *(editorial note) -> local note modal
+  // For backwards compatibility, a bare [URL] or (URL) is still accepted.
+  // Non-starred bracketed text (e.g. [?役]) is deliberately left untouched.
+  const marker = /\*{1,3}\s*(?:\(([^)]*)\)|\[([^\]]*)\])|(?:\((https?:\/\/[^)\s]+)\)|\[(https?:\/\/[^\]\s]+)\])/giu;
   const parts: ReactNode[] = [];
   let cursor = 0;
   let match: RegExpExecArray | null;
@@ -494,31 +705,85 @@ function GlossText({ value }: { value: string }) {
 
   while ((match = marker.exec(raw)) !== null) {
     const before = raw.slice(cursor, match.index);
-    const url = match[1] || match[2] || '';
-    // The external reference belongs to the immediately preceding Han character.
-    // We remove the URL syntax from the visible gloss and render that character as
-    // a clickable character + asterisk. Any text after the closing bracket is kept.
+    const payload = (match[1] ?? match[2] ?? match[3] ?? match[4] ?? '').trim();
+    const isUrl = /^https?:\/\/\S+$/iu.test(payload);
     const characterMatch = before.match(/^(.*)(\p{Script=Han})(\s*)$/us);
 
-    if (characterMatch && url) {
+    if (!payload) {
+      parts.push(before, match[0]);
+      cursor = marker.lastIndex;
+      continue;
+    }
+
+    if (characterMatch) {
       if (characterMatch[1]) parts.push(characterMatch[1]);
-      parts.push(
-        <a
-          className="dsl-gloss-ref"
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          title="Open external character reference"
-          onClick={event => event.stopPropagation()}
-          key={`gloss-ref-${key++}`}
-        >
-          {characterMatch[2]}<sup>*</sup>
-        </a>,
-      );
+
+      if (isUrl) {
+        parts.push(
+          <a
+            className="dsl-gloss-ref"
+            href={payload}
+            target="_blank"
+            rel="noreferrer"
+            title="Open external character reference"
+            onClick={event => event.stopPropagation()}
+            key={`gloss-ref-${key++}`}
+          >
+            {characterMatch[2]}<sup>*</sup>
+          </a>,
+        );
+      } else {
+        parts.push(
+          <button
+            type="button"
+            className="dsl-gloss-note-ref"
+            title="Open editorial gloss note"
+            aria-label={`Open note attached to ${characterMatch[2]}`}
+            onClick={event => {
+              event.stopPropagation();
+              setActiveNote(payload);
+            }}
+            key={`gloss-note-${key++}`}
+          >
+            {characterMatch[2]}<sup>*</sup>
+          </button>,
+        );
+      }
+
       if (characterMatch[3]) parts.push(characterMatch[3]);
     } else {
-      // Malformed/unsupported marker: hide the URL itself but preserve preceding text.
+      // A note may occasionally occupy the whole gloss and therefore have no
+      // preceding Han character (e.g. a standalone "*(see image …)" marker).
       parts.push(before);
+      if (isUrl) {
+        parts.push(
+          <a
+            className="dsl-gloss-note-standalone external"
+            href={payload}
+            target="_blank"
+            rel="noreferrer"
+            title="Open external gloss reference"
+            onClick={event => event.stopPropagation()}
+            key={`gloss-standalone-url-${key++}`}
+          >
+            REF.*
+          </a>,
+        );
+      } else {
+        parts.push(
+          <button
+            type="button"
+            className="dsl-gloss-note-standalone"
+            onClick={event => {
+              event.stopPropagation();
+              setActiveNote(payload);
+            }}
+            key={`gloss-standalone-note-${key++}`}
+          >
+            NOTE*
+          </button>,
+        );
+      }
     }
 
     cursor = marker.lastIndex;
@@ -526,7 +791,13 @@ function GlossText({ value }: { value: string }) {
 
   if (cursor === 0) return <>{raw}</>;
   if (cursor < raw.length) parts.push(raw.slice(cursor));
-  return <>{parts}</>;
+
+  return (
+    <>
+      {parts}
+      {activeNote ? <GlossNoteModal note={activeNote} onClose={() => setActiveNote(null)} /> : null}
+    </>
+  );
 }
 
 function statusClass(value: string | null | undefined): string {
@@ -587,16 +858,22 @@ export default function DictionaryPageBrowser() {
         setTypologyFilter('');
 
         const groups = groupOccurrences(next.data);
-        const firstContent = groups.find(group => !group.special) ?? groups[0];
+        const compositeMode = next.data.some(isCompositeOccurrence);
+        const navigableGroups = compositeMode ? groups.filter(group => text(group.line) !== '1') : groups;
+        const firstContent = navigableGroups.find(group => !group.special) ?? navigableGroups[0];
         const requestedLine = new URLSearchParams(window.location.search).get('line');
-        const requestedGroup = requestedLine == null
+        const syntheticFirstRequested = compositeMode && requestedLine === '1';
+        const requestedGroup = requestedLine == null || syntheticFirstRequested
           ? undefined
-          : groups.find(group => text(group.line) === requestedLine || group.key === requestedLine);
+          : navigableGroups.find(group => text(group.line) === requestedLine || group.key === requestedLine);
         const activeGroup = requestedGroup ?? firstContent;
-        setActiveLine(activeGroup?.key ?? '');
-        if (requestedGroup) {
+        setActiveLine(syntheticFirstRequested ? 'compound-first' : (activeGroup?.key ?? ''));
+        if (syntheticFirstRequested || requestedGroup) {
           window.setTimeout(() => {
-            document.getElementById(`dsl-line-${encodeURIComponent(requestedGroup.key)}`)
+            const targetId = syntheticFirstRequested
+              ? 'dsl-line-compound-first'
+              : `dsl-line-${encodeURIComponent(requestedGroup!.key)}`;
+            document.getElementById(targetId)
               ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }, 0);
         }
@@ -648,6 +925,10 @@ export default function DictionaryPageBrowser() {
   }, [deferredQuery, searchIndex]);
 
   const groups = useMemo(() => groupOccurrences(payload?.data ?? []), [payload]);
+  const isAntinomyPage = useMemo(() => (payload?.data ?? []).some(isAntinomyOccurrence), [payload]);
+  const isCompositePage = useMemo(() => (payload?.data ?? []).some(isCompositeOccurrence), [payload]);
+  const isParticulaePage = useMemo(() => (payload?.data ?? []).some(isParticulaeNumeralesOccurrence), [payload]);
+  const firstCompositeSyllable = useMemo(() => compositeFirstSyllable(payload?.data ?? []), [payload]);
   const filterOptions = useMemo(() => {
     const data = payload?.data ?? [];
     return {
@@ -659,12 +940,13 @@ export default function DictionaryPageBrowser() {
 
   const visibleGroups = useMemo(() => {
     return groups.filter(group => {
+      if (isCompositePage && text(group.line) === '1') return false;
       if (historicalStrokesFilter && !group.occurrences.some(row => text(row.historicalStrokes) === historicalStrokesFilter)) return false;
       if (modernStrokesFilter && !group.occurrences.some(row => text(row.modernStrokes) === modernStrokesFilter)) return false;
       if (typologyFilter && !group.occurrences.some(row => text(row.typology) === typologyFilter)) return false;
       return true;
     });
-  }, [groups, historicalStrokesFilter, modernStrokesFilter, typologyFilter]);
+  }, [groups, historicalStrokesFilter, modernStrokesFilter, typologyFilter, isCompositePage]);
 
   const searchMatches = useMemo(() => {
     if (!deferredQuery || !searchIndex) return { total: 0, entries: [] as DictionarySearchEntry[] };
@@ -719,9 +1001,11 @@ export default function DictionaryPageBrowser() {
     }
 
     if (lineValue) {
-      setActiveLine(lineValue);
+      const syntheticFirst = isCompositePage && lineValue === '1';
+      setActiveLine(syntheticFirst ? 'compound-first' : lineValue);
       window.setTimeout(() => {
-        document.getElementById(`dsl-line-${encodeURIComponent(lineValue)}`)
+        const targetId = syntheticFirst ? 'dsl-line-compound-first' : `dsl-line-${encodeURIComponent(lineValue)}`;
+        document.getElementById(targetId)
           ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 0);
     }
@@ -746,7 +1030,7 @@ export default function DictionaryPageBrowser() {
   const maxPage = payload?.maxPage ?? null;
 
   return (
-    <div className="dsl-app">
+    <div className={`dsl-app ${isAntinomyPage ? 'dsl-mode-antinomy' : ''} ${isCompositePage ? 'dsl-mode-compounds' : ''} ${isParticulaePage ? 'dsl-mode-numerales' : ''}`}>
       <div className="dsl-page-toolbar" aria-label="Dictionary page controls">
         <div className="dsl-page-tools">
           <form className="dsl-page-label dsl-page-jump" onSubmit={submitPageJump} title="Type a page number and press Enter">
@@ -839,8 +1123,28 @@ export default function DictionaryPageBrowser() {
           </section>
 
           <div className="dsl-locus-list">
-            {groups.map(group => {
+            {isCompositePage ? (
+              <button
+                type="button"
+                className={`dsl-locus-link dsl-comp-first-locus ${activeLine === 'compound-first' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveLine('compound-first');
+                  document.getElementById('dsl-line-compound-first')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
+              >
+                <span>
+                  <span className="dsl-locus-line">Line 1</span>
+                  <span className="dsl-locus-word dsl-comp-first-locus-word">
+                    <span className="dsl-locus-glyph">{glyphDisplay(firstCompositeSyllable.character, firstCompositeSyllable.simplified, firstCompositeSyllable.glyphLink)}</span>
+                    <em>{compositeReading(firstCompositeSyllable)}</em>
+                  </span>
+                </span>
+                <span className="dsl-count">1</span>
+              </button>
+            ) : null}
+            {groups.filter(group => !(isCompositePage && text(group.line) === '1')).map(group => {
               const primary = primaryOccurrence(group);
+              const firstAntinomy = antinomiesForGroup(group)[0];
               return (
                 <button
                   type="button"
@@ -850,7 +1154,39 @@ export default function DictionaryPageBrowser() {
                 >
                   <span>
                     <span className="dsl-locus-line">Line {text(group.line) || '—'}</span>
-                    {!group.special && primary ? (
+                    {isAntinomyPage ? (
+                      firstAntinomy ? (
+                        <span className="dsl-locus-word dsl-ant-locus-pair">
+                          <span className="dsl-locus-glyph">{glyphDisplay(firstAntinomy.item.left.character, firstAntinomy.item.left.simplified, firstAntinomy.item.left.glyphLink)}</span>
+                          <span className="dsl-ant-locus-arrow">↔</span>
+                          <span className="dsl-locus-glyph">{glyphDisplay(firstAntinomy.item.right.character, firstAntinomy.item.right.simplified, firstAntinomy.item.right.glyphLink)}</span>
+                        </span>
+                      ) : <span className="dsl-locus-word dsl-empty-word">—</span>
+                    ) : isCompositePage ? (() => {
+                      const slots = compositeSlots(group);
+                      const left = slots[0]?.item?.second;
+                      const right = slots[1]?.item?.second;
+                      const hasState = slots.some(slot => !slot.blank);
+                      if (!hasState) return <span className="dsl-locus-word dsl-empty-word">—</span>;
+                      return (
+                        <span className="dsl-locus-word dsl-comp-locus-pair">
+                          <span className={`dsl-locus-glyph ${slots[0]?.unresolved ? 'dsl-locus-revision' : ''}`}>{slots[0]?.unresolved ? 'REV.' : left ? glyphDisplay(left.character, left.simplified, left.glyphLink) : '—'}</span>
+                          <span className="dsl-comp-locus-divider">│</span>
+                          <span className={`dsl-locus-glyph ${slots[1]?.unresolved ? 'dsl-locus-revision' : ''}`}>{slots[1]?.unresolved ? 'REV.' : right ? glyphDisplay(right.character, right.simplified, right.glyphLink) : '—'}</span>
+                        </span>
+                      );
+                    })() : isParticulaePage ? (() => {
+                      const slots = particulaeSlots(group);
+                      const terms = slots.map(slot => slot.occurrence && !slot.blank && !slot.unresolved ? occurrenceAsAppendixTerm(slot.occurrence) : null);
+                      if (!slots.some(slot => !slot.blank)) return <span className="dsl-locus-word dsl-empty-word">—</span>;
+                      return (
+                        <span className="dsl-locus-word dsl-comp-locus-pair">
+                          <span className={`dsl-locus-glyph ${slots[0]?.unresolved ? 'dsl-locus-revision' : ''}`}>{slots[0]?.unresolved ? 'REV.' : terms[0] ? glyphDisplay(terms[0].character, terms[0].simplified, terms[0].glyphLink) : '—'}</span>
+                          <span className="dsl-comp-locus-divider">│</span>
+                          <span className={`dsl-locus-glyph ${slots[1]?.unresolved ? 'dsl-locus-revision' : ''}`}>{slots[1]?.unresolved ? 'REV.' : terms[1] ? glyphDisplay(terms[1].character, terms[1].simplified, terms[1].glyphLink) : '—'}</span>
+                        </span>
+                      );
+                    })() : !group.special && primary ? (
                       <span className="dsl-locus-word">
                         <span className="dsl-locus-glyph">{glyphDisplay(primary.character, primary.simplified, primary.glyphLink)}</span>
                         <em>{primary.romanization || ''}</em>
@@ -863,6 +1199,26 @@ export default function DictionaryPageBrowser() {
             })}
             {!loading && groups.length === 0 && <p className="dsl-empty-sidebar">No encoded lines on this page.</p>}
           </div>
+
+          {isAntinomyPage ? (
+            <section className="dsl-ant-appendix-meta">
+              <span className="dsl-ant-kicker">APPENDIX MODE</span>
+              <h3>ANTINOMY</h3>
+              <p>Paired lexical oppositions encoded through occurrence-backed character–reading relations.</p>
+            </section>
+          ) : isCompositePage ? (
+            <section className="dsl-ant-appendix-meta dsl-comp-appendix-meta">
+              <span className="dsl-ant-kicker">APPENDIX MODE</span>
+              <h3>COMPOUNDS</h3>
+              <p>Disyllabic constructions reconstructed from occurrence-backed composite-word relations.</p>
+            </section>
+          ) : isParticulaePage ? (
+            <section className="dsl-ant-appendix-meta dsl-num-appendix-meta">
+              <span className="dsl-ant-kicker">APPENDIX MODE</span>
+              <h3>PARTICULAE NUMERALES</h3>
+              <p>Numeral particles arranged as paired character–definition entries in manuscript order.</p>
+            </section>
+          ) : null}
 
           <section className="dsl-index-meta">
             <h3>HISTORICAL INDEX</h3>
@@ -911,13 +1267,31 @@ export default function DictionaryPageBrowser() {
         </aside>
 
         <main className="dsl-folio" aria-busy={loading}>
-          <div className="dsl-folio-head">
-            <div aria-label="Stroke section" />
-            <div>CHARACTER</div>
-            <div>DEFINITION(S)</div>
-            <div>GLOSSES</div>
-            <div>GRAPHIC<br />VARIANTS</div>
-            <div>SYNONYMS</div>
+          <div className={`dsl-folio-head ${isAntinomyPage ? 'dsl-ant-head' : ''} ${isCompositePage ? 'dsl-comp-head' : ''} ${isParticulaePage ? 'dsl-num-head' : ''}`}>
+            {isAntinomyPage ? (
+              <>
+                <div>CHARACTER</div>
+                <div>CHARACTER</div>
+                <div>DEFINITION(S)</div>
+                <div aria-label="Reserved empty appendix column" />
+              </>
+            ) : isCompositePage || isParticulaePage ? (
+              <>
+                <div>CHARACTER</div>
+                <div>DEFINITION(S)</div>
+                <div>CHARACTER</div>
+                <div>DEFINITION(S)</div>
+              </>
+            ) : (
+              <>
+                <div aria-label="Stroke section" />
+                <div>CHARACTER</div>
+                <div>DEFINITION(S)</div>
+                <div>GLOSSES</div>
+                <div>GRAPHIC<br />VARIANTS</div>
+                <div>SYNONYMS</div>
+              </>
+            )}
           </div>
 
           <div className="dsl-folio-body">
@@ -929,7 +1303,116 @@ export default function DictionaryPageBrowser() {
               </details>
             ) : null}
 
+            {!error && isCompositePage ? (
+              <article className="dsl-entry dsl-comp-entry dsl-comp-first-row" id="dsl-line-compound-first">
+                <div className="dsl-cell dsl-comp-character-cell" aria-hidden="true" />
+                <div className="dsl-cell dsl-comp-first-cell"><CompositeTermCard term={firstCompositeSyllable} /></div>
+                <div className="dsl-cell dsl-comp-character-cell" aria-hidden="true" />
+                <div className="dsl-cell dsl-comp-first-cell"><CompositeTermCard term={firstCompositeSyllable} /></div>
+              </article>
+            ) : null}
+
             {!error && visibleGroups.map(group => {
+              if (isAntinomyPage) {
+                const pairs = antinomiesForGroup(group);
+                const definitions = antinomyDefinitions(group);
+                const completelyBlank = pairs.length === 0 && definitions.length === 0;
+                const unresolved = pairs.length === 0 && !completelyBlank;
+
+                return (
+                  <article
+                    id={`dsl-line-${encodeURIComponent(group.key)}`}
+                    className={`dsl-entry dsl-ant-entry ${completelyBlank ? 'dsl-ant-empty' : ''} ${unresolved ? 'dsl-ant-unresolved' : ''}`}
+                    key={group.key}
+                    onClick={() => setActiveLine(group.key)}
+                  >
+                    <div className="dsl-cell dsl-ant-character-cell">
+                      {completelyBlank ? null : pairs.length ? (
+                        <div className="dsl-ant-term-stack">
+                          {pairs.map(({ item }) => <AntinomyTermCard term={item.left} key={`left-${item.relationId}-${item.left.wordId}`} />)}
+                        </div>
+                      ) : <UnderRevisionCard />}
+                    </div>
+
+                    <div className="dsl-cell dsl-ant-character-cell">
+                      {completelyBlank ? null : pairs.length ? (
+                        <div className="dsl-ant-term-stack">
+                          {pairs.map(({ item }) => <AntinomyTermCard term={item.right} key={`right-${item.relationId}-${item.right.wordId}`} />)}
+                        </div>
+                      ) : <UnderRevisionCard />}
+                    </div>
+
+                    <div className="dsl-cell dsl-definition dsl-ant-definition">
+                      {completelyBlank ? null : definitions.map((definition, index) => (
+                        <div className="dsl-main-definition" key={`${group.key}-ant-def-${index}`}>
+                          <DefinitionHtml html={definition} />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="dsl-cell dsl-ant-reserved" aria-hidden="true" />
+                  </article>
+                );
+              }
+
+              if (isCompositePage) {
+                const slots = compositeSlots(group);
+                return (
+                  <article
+                    id={`dsl-line-${encodeURIComponent(group.key)}`}
+                    className="dsl-entry dsl-comp-entry"
+                    key={group.key}
+                    onClick={() => setActiveLine(group.key)}
+                  >
+                    {slots.flatMap((slot, index) => {
+                      const occurrence = slot.occurrence;
+                      const second = slot.item?.second ?? null;
+                      const definition = occurrence?.latinDefinition ?? null;
+                      const characterCell = (
+                        <div className={`dsl-cell dsl-comp-character-cell ${slot.blank ? 'dsl-comp-empty-cell' : ''} ${slot.unresolved ? 'dsl-comp-unresolved-cell' : ''}`} key={`${group.key}-comp-char-${index}`}>
+                          {!slot.blank ? (slot.unresolved ? <UnderRevisionCard /> : second ? <CompositeTermCard term={second} /> : null) : null}
+                        </div>
+                      );
+                      const definitionCell = (
+                        <div className={`dsl-cell dsl-definition dsl-comp-definition ${slot.blank ? 'dsl-comp-empty-cell' : ''}`} key={`${group.key}-comp-def-${index}`}>
+                          {!slot.blank && definition ? <DefinitionHtml html={definition} /> : null}
+                        </div>
+                      );
+                      return [characterCell, definitionCell];
+                    })}
+                  </article>
+                );
+              }
+
+              if (isParticulaePage) {
+                const slots = particulaeSlots(group);
+                return (
+                  <article
+                    id={`dsl-line-${encodeURIComponent(group.key)}`}
+                    className="dsl-entry dsl-comp-entry dsl-num-entry"
+                    key={group.key}
+                    onClick={() => setActiveLine(group.key)}
+                  >
+                    {slots.flatMap((slot, index) => {
+                      const occurrence = slot.occurrence;
+                      const definition = occurrence?.latinDefinition ?? null;
+                      const term = occurrence && !slot.blank && !slot.unresolved ? occurrenceAsAppendixTerm(occurrence) : null;
+                      const characterCell = (
+                        <div className={`dsl-cell dsl-comp-character-cell ${slot.blank ? 'dsl-comp-empty-cell' : ''} ${slot.unresolved ? 'dsl-comp-unresolved-cell' : ''}`} key={`${group.key}-num-char-${index}`}>
+                          {!slot.blank ? (slot.unresolved ? <UnderRevisionCard /> : term ? <CompositeTermCard term={term} /> : null) : null}
+                        </div>
+                      );
+                      const definitionCell = (
+                        <div className={`dsl-cell dsl-definition dsl-comp-definition ${slot.blank ? 'dsl-comp-empty-cell' : ''}`} key={`${group.key}-num-def-${index}`}>
+                          {!slot.blank && definition ? <DefinitionHtml html={definition} /> : null}
+                        </div>
+                      );
+                      return [characterCell, definitionCell];
+                    })}
+                  </article>
+                );
+              }
+
               const primary = primaryOccurrence(group);
               const graphics = dedupeGraphicVariants(group);
               const synonymGroups = groupSynonymsByPosition(group);
@@ -1087,7 +1570,7 @@ export default function DictionaryPageBrowser() {
 
           <footer className="dsl-folio-foot">
             <span>{payload ? `${payload.count} occurrences · ${payload.lineCount} printed lines` : 'Dictionary page'}</span>
-            <span>page-by-page Directus reconstruction</span>
+            <span>{isAntinomyPage ? 'antinomy appendix reconstruction' : isCompositePage ? 'compound appendix reconstruction' : isParticulaePage ? 'particulae numerales appendix reconstruction' : 'page-by-page Directus reconstruction'}</span>
           </footer>
         </main>
 

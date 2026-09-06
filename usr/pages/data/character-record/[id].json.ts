@@ -506,7 +506,13 @@ async function buildPayload(id: string): Promise<CharacterRecordDetailPayload> {
     const targetCharacter = allChinese.get(targetCharacterId);
     const targetRom = allRom.get(relationId(targetReading?.rom_id));
     const glyph = displayGlyph(targetCharacter);
-    const evidence: RecordRelationEvidence[] = (lexicalEvidenceByRelation.get(relationIdValue) ?? []).map(item => {
+    const evidenceRows = lexicalEvidenceByRelation.get(relationIdValue) ?? [];
+    const antinomyEvidence = evidenceRows.some(item => {
+      const occ = occById.get(relationId(item.occ_id));
+      return text(occ?.typology)?.trim().toLocaleLowerCase() === 'antinomy';
+    });
+    const effectiveTypology = antinomyEvidence ? 'antinomy' : text(row.typology);
+    const evidence: RecordRelationEvidence[] = evidenceRows.map(item => {
       const occId = relationId(item.occ_id);
       const occ = occById.get(occId);
       const locus = occ ? locusOfOcc(occ) : { dictionaryId: null, dictionaryLabel: 'Dictionary', page: null, line: null };
@@ -531,8 +537,8 @@ async function buildPayload(id: string): Promise<CharacterRecordDetailPayload> {
       targetHistorical: text(targetRom?.rom),
       targetModern: text(targetRom?.modern_rom),
       targetEnglish: text(targetReading?.english_definition),
-      typology: text(row.typology),
-      category: relationCategory(text(row.typology)),
+      typology: effectiveTypology,
+      category: antinomyEvidence ? 'antonym' : relationCategory(effectiveTypology),
       evidenceCount: distinctEvidenceOccs.size,
       evidence,
     };

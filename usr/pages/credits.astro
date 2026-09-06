@@ -34,7 +34,7 @@ const institutions = [
 ---
 <CharactersLayout
   title="Credits — CHIND"
-  description="Project team, institutions and project references for CHIND — Dictionarium Sinico–Latinum."
+  description="Project team, institutions, acknowledgements and project references for CHIND — Dictionarium sinico-latinum."
 >
   <main class="credits-page">
     <div class="credits-paper">
@@ -42,15 +42,16 @@ const institutions = [
         <div>
           <p class="credits-kicker"><span>PROJECT</span><i>/</i><strong>CREDITS</strong></p>
           <h1>Credits</h1>
-          <p class="credits-subtitle">CHIND · Dictionarium Sinico–Latinum</p>
+          <p class="credits-subtitle">CHIND · Dictionarium sinico-latinum</p>
         </div>
 
         <aside class="credits-project-ref" aria-label="Project reference">
-          <span class="credits-ref-label">PRIN PNRR 2022</span>
-          <p>“CHIN-DICTIONARY - Brollo’s <i>Dictionarium sinico-latinum</i>: linguistic innovations, textual connections, and trans-cultural translation”</p>
+          <span class="credits-ref-label">PRIN 2022 PNRR · NEXTGENERATIONEU</span>
+          <p>“CHIN-DICTIONARY — Brollo’s <i>Dictionarium sinico-latinum</i>: linguistic innovations, textual connections, and trans-cultural translation”</p>
           <dl>
             <div><dt>Project code</dt><dd>P2022XBX35</dd></div>
             <div><dt>CUP</dt><dd>B53D23029330001</dd></div>
+            <div><dt>PNRR</dt><dd>M4C2 · Investment 1.1</dd></div>
           </dl>
         </aside>
       </header>
@@ -63,7 +64,7 @@ const institutions = [
         <h2 id="credits-pi-title">PROJECT P.I.</h2>
         <PersonCard
           name="Gabriele Tola"
-          role="Associate Professor"
+          role="Principal Investigator · Associate Professor"
           department="Department of Humanities, Ancient and Modern Languages, Literature and Cultures"
           institution="Università degli Studi di Perugia"
           email="gabriele.tola@unipg.it"
@@ -72,7 +73,7 @@ const institutions = [
       </section>
 
       <section class="credits-team-section" aria-labelledby="credits-leads-title">
-        <h2 id="credits-leads-title">PROJECT LEADS</h2>
+        <h2 id="credits-leads-title">LOCAL INVESTIGATORS</h2>
         <div class="credits-card-grid two">
           <PersonCard
             name="Victoria Almonte"
@@ -89,20 +90,60 @@ const institutions = [
         </div>
       </section>
 
+      <section class="credits-team-section" aria-labelledby="credits-sapienza-title">
+        <h2 id="credits-sapienza-title">SAPIENZA LOCAL UNIT</h2>
+        <div class="credits-card-grid two">
+          <PersonCard name="Federico Masini" role="Project member" institution="Sapienza Università di Roma" />
+          <PersonCard name="Paolo De Troia" role="Project member" institution="Sapienza Università di Roma" />
+        </div>
+      </section>
+
       <section class="credits-team-section" aria-labelledby="credits-content-title">
-        <h2 id="credits-content-title">CONTENT LEADS</h2>
+        <h2 id="credits-content-title">RESEARCH &amp; CONTENT</h2>
         <div class="credits-card-grid four">
-          <PersonCard name="Erica Cecchetti" role="Content Lead" compact={true} />
-          <PersonCard name="Silvana Maiello" role="Content Lead" compact={true} />
-          <PersonCard name="Mattia Marconi" role="Content Lead" compact={true} />
-          <PersonCard name="Chen Ya" role="Content Lead" compact={true} />
+          <PersonCard name="Erica Cecchetti" role="Research Fellow · Content" institution="Sapienza Università di Roma" compact={true} />
+          <PersonCard name="Silvana Maiello" role="Research Fellow · Content" institution="Sapienza Università di Roma" compact={true} />
+          <PersonCard name="Mattia Marconi" role="Research Fellow · Content" institution={`Università degli Studi di Napoli “L’Orientale”`} compact={true} />
+          <PersonCard name="Ya Chen" role="Research Fellow · Content" institution="Università degli Studi della Tuscia" compact={true} />
         </div>
       </section>
 
       <section class="credits-team-section credits-digital" aria-labelledby="credits-digital-title">
         <h2 id="credits-digital-title">DIGITAL INFRASTRUCTURE</h2>
         <div class="credits-card-grid single">
-          <PersonCard name="Erasmo di Fonso" role="Digital Infrastructure" />
+          <PersonCard name="Erasmo di Fonso" role="Research Fellow · Digital Infrastructure" institution="Sapienza Università di Roma" />
+        </div>
+      </section>
+
+      <section class="credits-static-section" aria-labelledby="credits-ack-title">
+        <div class="credits-static-head">
+          <p>ACKNOWLEDGEMENTS</p>
+          <h2 id="credits-ack-title">Institutional and research support</h2>
+        </div>
+        <div class="credits-static-grid">
+          <article>
+            <h3>Biblioteca Medicea Laurenziana</h3>
+            <p>The CHIN-DICTIONARY research group gratefully acknowledges the Biblioteca Medicea Laurenziana for its assistance with the consultation of manuscript Rinuccini 22.</p>
+          </article>
+          <article>
+            <h3>Laboratorio di Archeologia Digitale</h3>
+            <p>The project thanks the Laboratorio di Archeologia Digitale (LAD), directed by Prof. Julian Bogdani, which hosts and maintains the database and provides virtual-server infrastructure, technical support, and backups.</p>
+          </article>
+          <article>
+            <h3>University of Perugia</h3>
+            <p>The principal investigator also thanks the Department of Humanities — Ancient and Modern Languages, Literatures and Civilizations of the University of Perugia for supporting the continuation of his work on the project.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="credits-static-section credits-resources" aria-labelledby="credits-resources-title">
+        <div class="credits-static-head">
+          <p>EXTERNAL RESOURCES</p>
+          <h2 id="credits-resources-title">Character and graphic-variant resources</h2>
+        </div>
+        <div class="credits-resource-copy">
+          <p>Some external character links provided by CHIND refer to resources maintained outside the project. In particular, graphic-variant and character-reference links may point to the <a href="https://dict.variants.moe.edu.tw/" target="_blank" rel="noreferrer">Dictionary of Chinese Character Variants ↗</a> and to <a href="https://zi.tools/" target="_blank" rel="noreferrer">zi.tools ↗</a>.</p>
+          <p>CHIND does not reproduce or claim ownership of these external resources; the links are provided to support scholarly consultation and comparison.</p>
         </div>
       </section>
 

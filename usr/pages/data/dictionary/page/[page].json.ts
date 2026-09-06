@@ -201,6 +201,106 @@ function currentAndOtherId(
   return { sourceId: leftId, relatedId: rightId };
 }
 
+
+function normalizedTypology(value: any): string {
+  return String(value ?? '').normalize('NFKC').trim().toLocaleLowerCase();
+}
+
+function antinomyTerm(
+  wordIdValue: any,
+  words: Map<string, AnyRecord>,
+  characters: Map<string, AnyRecord>,
+  romanizations: Map<string, AnyRecord>,
+) {
+  const wordId = relationId(wordIdValue);
+  const word = wordId == null ? undefined : words.get(String(wordId));
+  const characterId = relationId(word?.chinese_id);
+  const character = characterId == null ? undefined : characters.get(String(characterId));
+  const romanizationId = relationId(word?.rom_id);
+  const romanization = romanizationId == null ? undefined : romanizations.get(String(romanizationId));
+
+  return {
+    wordId,
+    characterId,
+    character: character?.car ?? null,
+    simplified: character?.simplified_chinese ?? null,
+    glyphLink: character?.link_nuovo || character?.link || null,
+    romanizationId,
+    romanization: romanization?.rom ?? null,
+    modernRomanization: romanization?.modern_rom ?? null,
+    simpleRomanization: romanization?.simple_romanization ?? null,
+  };
+}
+
+const COMPOSITE_JUNCTION_COLLECTIONS = ['occ_composite_word', 'occ_composite_words'] as const;
+const COMPOSITE_OCC_FIELDS = ['occ_id', 'occ'] as const;
+const COMPOSITE_RELATION_FIELDS = ['composite_word_id', 'composite_words_id', 'composite_word', 'composite_words'] as const;
+
+function compositeOccurrenceId(row: AnyRecord): Id | null {
+  for (const field of COMPOSITE_OCC_FIELDS) {
+    const id = relationId(row[field]);
+    if (id != null) return id;
+  }
+  return null;
+}
+
+function compositeRelationId(row: AnyRecord): Id | null {
+  for (const field of COMPOSITE_RELATION_FIELDS) {
+    const id = relationId(row[field]);
+    if (id != null) return id;
+  }
+  return null;
+}
+
+async function optionalCompositeJunctions(occIds: Id[]): Promise<OptionalRows> {
+  if (occIds.length === 0) return { rows: [] };
+  const messages: string[] = [];
+
+  for (const table of COMPOSITE_JUNCTION_COLLECTIONS) {
+    if (STATIC_BUILD_MODE) {
+      try {
+        const wanted = new Set(occIds.map(String));
+        const rows = await fullCollection(table);
+        return {
+          rows: rows.filter(row => {
+            const id = compositeOccurrenceId(row);
+            return id != null && wanted.has(String(id));
+          }),
+        };
+      } catch (error) {
+        messages.push(`${table}: ${error instanceof Error ? error.message : String(error)}`);
+        continue;
+      }
+    }
+
+    for (const field of COMPOSITE_OCC_FIELDS) {
+      try {
+        return { rows: await fetchWhereIn(table, field, occIds) };
+      } catch (error) {
+        messages.push(`${table}.${field}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+  }
+
+  return {
+    rows: [],
+    warning: `Optional composite occurrence junction could not be read: ${messages.join(' | ')}`,
+  };
+}
+
+function indexCompositeJunctionsByOcc(rows: AnyRecord[]): Map<string, AnyRecord[]> {
+  const map = new Map<string, AnyRecord[]>();
+  for (const row of rows) {
+    const id = compositeOccurrenceId(row);
+    if (id == null) continue;
+    const k = String(id);
+    const list = map.get(k) ?? [];
+    list.push(row);
+    map.set(k, list);
+  }
+  return map;
+}
+
 function flattenOccurrence(
   occ: AnyRecord,
   words: Map<string, AnyRecord>,
@@ -210,6 +310,8 @@ function flattenOccurrence(
   graphicRelations: Map<string, AnyRecord>,
   synonymJunctionsByOcc: Map<string, AnyRecord[]>,
   synonymRelations: Map<string, AnyRecord>,
+  compositeJunctionsByOcc: Map<string, AnyRecord[]>,
+  compositeRelations: Map<string, AnyRecord>,
 ) {
   const wordId = relationId(occ.word);
   const word = wordId == null ? undefined : words.get(String(wordId));
@@ -245,7 +347,34 @@ function flattenOccurrence(
     })
     .filter(Boolean);
 
-  const synonyms = (synonymJunctionsByOcc.get(key(occ.id)) ?? [])
+  const lexicalJunctions = synonymJunctionsByOcc.get(key(occ.id)) ?? [];
+  const antinomyOccurrence = normalizedTypology(occ.typology) === 'antinomy';
+
+  // Appendix antinomies use the same lexical-relation table as synonym slots,
+  // but the occurrence has no occ.word. Preserve the relation orientation as
+  // stored in chinese_rom_chinese_rom: chinese_rom_id is the left term and
+  // related_chinese_rom_id the right term.
+  const antinomies = antinomyOccurrence
+    ? lexicalJunctions
+      .map(junction => {
+        const relationIdValue = relationId(junction.chinese_rom_chinese_rom_id);
+        const relation = relationIdValue == null ? undefined : synonymRelations.get(String(relationIdValue));
+        if (!relation) return null;
+
+        return {
+          junctionId: relationId(junction.id),
+          relationId: relationIdValue,
+          sourceOccurrenceId: occ.id,
+          relationTypology: relation.typology ?? null,
+          note: junction.note ?? null,
+          left: antinomyTerm(relation.chinese_rom_id, words, characters, romanizations),
+          right: antinomyTerm(relation.related_chinese_rom_id, words, characters, romanizations),
+        };
+      })
+      .filter(Boolean)
+    : [];
+
+  const synonyms = antinomyOccurrence ? [] : lexicalJunctions
     .map(junction => {
       const relationIdValue = relationId(junction.chinese_rom_chinese_rom_id);
       const relation = relationIdValue == null ? undefined : synonymRelations.get(String(relationIdValue));
@@ -287,6 +416,25 @@ function flattenOccurrence(
     })
     .filter(Boolean);
 
+
+  const compositeOccurrence = normalizedTypology(occ.typology) === 'composti';
+  const composites = compositeOccurrence
+    ? (compositeJunctionsByOcc.get(key(occ.id)) ?? [])
+      .map(junction => {
+        const compositeId = compositeRelationId(junction);
+        const composite = compositeId == null ? undefined : compositeRelations.get(String(compositeId));
+        if (!composite) return null;
+        return {
+          junctionId: relationId(junction.id),
+          compositeId,
+          sourceOccurrenceId: occ.id,
+          first: antinomyTerm(composite.first_syllable, words, characters, romanizations),
+          second: antinomyTerm(composite.second_syllable, words, characters, romanizations),
+        };
+      })
+      .filter(Boolean)
+    : [];
+
   return {
     id: occ.id,
     dictionaryId: relationId(occ.dictionary_id),
@@ -324,6 +472,8 @@ function flattenOccurrence(
 
     graphicVariants,
     synonyms,
+    antinomies,
+    composites,
   };
 }
 
@@ -399,27 +549,33 @@ export const GET: APIRoute = async ({ params, props }) => {
 
   // Optional documentary relations are isolated: a permission problem in one
   // apparatus table must not make the lexical page itself unavailable.
-  const [graphicJunctionResult, synonymJunctionResult] = await Promise.all([
+  const [graphicJunctionResult, synonymJunctionResult, compositeJunctionResult] = await Promise.all([
     optionalWhereIn('occ_chinese_chinese', 'occ_id', occIds),
     optionalWhereIn('occ_chinese_rom_chinese_rom', 'occ_id', occIds),
+    optionalCompositeJunctions(occIds),
   ]);
   if (graphicJunctionResult.warning) warnings.push(graphicJunctionResult.warning);
   if (synonymJunctionResult.warning) warnings.push(synonymJunctionResult.warning);
+  if (compositeJunctionResult.warning) warnings.push(compositeJunctionResult.warning);
 
   const graphicRelationIds = uniqueIds(graphicJunctionResult.rows.map(row => row.chinese_chinese_id));
   const synonymRelationIds = uniqueIds(synonymJunctionResult.rows.map(row => row.chinese_rom_chinese_rom_id));
+  const compositeRelationIds = uniqueIds(compositeJunctionResult.rows.map(row => compositeRelationId(row)));
 
-  const [graphicRelationResult, synonymRelationResult] = await Promise.all([
+  const [graphicRelationResult, synonymRelationResult, compositeRelationResult] = await Promise.all([
     optionalByIds('chinese_chinese', graphicRelationIds),
     optionalByIds('chinese_rom_chinese_rom', synonymRelationIds),
+    optionalByIds('composite_words', compositeRelationIds),
   ]);
   if (graphicRelationResult.warning) warnings.push(graphicRelationResult.warning);
   if (synonymRelationResult.warning) warnings.push(synonymRelationResult.warning);
+  if (compositeRelationResult.warning) warnings.push(compositeRelationResult.warning);
 
   // Resolve only the word/readings needed by this printed page and its visible apparatus.
   const wordIds = uniqueIds([
     ...occRows.map(row => row.word),
     ...synonymRelationResult.rows.flatMap(row => [row.chinese_rom_id, row.related_chinese_rom_id]),
+    ...compositeRelationResult.rows.flatMap(row => [row.first_syllable, row.second_syllable]),
   ]);
   const wordRows = await fetchByIds('chinese_rom', wordIds);
 
@@ -439,8 +595,10 @@ export const GET: APIRoute = async ({ params, props }) => {
   const romanizations = new Map(romanizationRows.map(row => [key(row.id), row]));
   const graphicRelations = new Map(graphicRelationResult.rows.map(row => [key(row.id), row]));
   const synonymRelations = new Map(synonymRelationResult.rows.map(row => [key(row.id), row]));
+  const compositeRelations = new Map(compositeRelationResult.rows.map(row => [key(row.id), row]));
   const graphicJunctionsByOcc = indexBy(graphicJunctionResult.rows, 'occ_id');
   const synonymJunctionsByOcc = indexBy(synonymJunctionResult.rows, 'occ_id');
+  const compositeJunctionsByOcc = indexCompositeJunctionsByOcc(compositeJunctionResult.rows);
 
   const data = occRows.map(occ => flattenOccurrence(
     occ,
@@ -451,6 +609,8 @@ export const GET: APIRoute = async ({ params, props }) => {
     graphicRelations,
     synonymJunctionsByOcc,
     synonymRelations,
+    compositeJunctionsByOcc,
+    compositeRelations,
   ));
 
   const lineCount = new Set(data.map(row => String(row.line ?? ''))).size;

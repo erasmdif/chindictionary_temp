@@ -86,37 +86,100 @@ async function readCollection(table: string, fields: readonly string[]): Promise
   }
 }
 
+async function readOptionalCollection(table: string, fields: readonly string[]): Promise<AnyRecord[]> {
+  try {
+    return await readCollection(table, fields);
+  } catch {
+    return [];
+  }
+}
+
+function normalizedTypology(value: any): string {
+  return String(value ?? '').normalize('NFKC').trim().toLocaleLowerCase();
+}
+
+function blankAppendixDefinition(value: any): boolean {
+  const clean = String(value ?? '')
+    .replace(/<[^>]*>/g, ' ')
+    .normalize('NFKC')
+    .trim()
+    .toLocaleLowerCase();
+  return !clean || clean === 'empty' || clean === 'null' || clean === 'nan';
+}
+
+function compositeOccId(row: AnyRecord): string {
+  return relationId(row.occ_id || row.occ);
+}
+
+function compositeRelationId(row: AnyRecord): string {
+  return relationId(row.composite_word_id || row.composite_words_id || row.composite_word || row.composite_words);
+}
+
+
 function naturalCompare(a: any, b: any): number {
   return String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true, sensitivity: 'base' });
 }
 
 async function buildPayload() {
-  const [occurrences, words, characters, romanisations] = await Promise.all([
-    readCollection('occ', ['id', 'page', 'line', 'word']),
+  const [occurrences, words, characters, romanisations, lexicalRelations, lexicalEvidence, composites] = await Promise.all([
+    readCollection('occ', ['id', 'page', 'line', 'word', 'typology', 'latin_definition_2']),
     readCollection('chinese_rom', ['id', 'chinese_id', 'rom_id']),
     readCollection('chinese', ['id', 'car', 'simplified_chinese', 'link', 'link_nuovo']),
     readCollection('rom', ['id', 'rom', 'modern_rom', 'simple_romanization']),
+    readOptionalCollection('chinese_rom_chinese_rom', ['id', 'chinese_rom_id', 'related_chinese_rom_id', 'typology']),
+    readOptionalCollection('occ_chinese_rom_chinese_rom', ['id', 'occ_id', 'chinese_rom_chinese_rom_id']),
+    readOptionalCollection('composite_words', ['id', 'first_syllable', 'second_syllable']),
   ]);
+
+  let compositeEvidence: AnyRecord[] = [];
+  for (const table of ['occ_composite_word', 'occ_composite_words']) {
+    const rows = await readOptionalCollection(table, ['id', 'occ_id', 'occ', 'composite_word_id', 'composite_words_id', 'composite_word', 'composite_words']);
+    if (rows.length) {
+      compositeEvidence = rows;
+      break;
+    }
+  }
 
   const wordById = new Map(words.map(row => [relationId(row.id), row] as const));
   const characterById = new Map(characters.map(row => [relationId(row.id), row] as const));
   const romById = new Map(romanisations.map(row => [relationId(row.id), row] as const));
+  const lexicalRelationById = new Map(lexicalRelations.map(row => [relationId(row.id), row] as const));
+  const compositeById = new Map(composites.map(row => [relationId(row.id), row] as const));
+  const lexicalEvidenceByOcc = new Map<string, AnyRecord[]>();
+  for (const row of lexicalEvidence) {
+    const occId = relationId(row.occ_id);
+    if (!occId) continue;
+    const list = lexicalEvidenceByOcc.get(occId) ?? [];
+    list.push(row);
+    lexicalEvidenceByOcc.set(occId, list);
+  }
+
+  const compositeEvidenceByOcc = new Map<string, AnyRecord[]>();
+  for (const row of compositeEvidence) {
+    const occId = compositeOccId(row);
+    if (!occId) continue;
+    const list = compositeEvidenceByOcc.get(occId) ?? [];
+    list.push(row);
+    compositeEvidenceByOcc.set(occId, list);
+  }
 
   const seen = new Set<string>();
   const entries: Array<Record<string, string | number | null>> = [];
 
-  for (const occ of occurrences) {
+  const addWordEntry = (
+    occ: AnyRecord,
+    wordId: string,
+    semanticSuffix: string,
+  ) => {
     const page = Number(occ.page);
-    if (!Number.isFinite(page) || page < 1) continue;
+    if (!Number.isFinite(page) || page < 1) return;
+    if (!wordId || EDITORIAL_WORD_IDS.has(wordId)) return;
 
-    const wordId = relationId(occ.word);
-    if (!wordId || EDITORIAL_WORD_IDS.has(wordId)) continue;
     const word = wordById.get(wordId);
-    if (!word) continue;
-
+    if (!word) return;
     const characterId = relationId(word.chinese_id);
     const character = characterById.get(characterId);
-    if (!characterId || !isLexicalCharacter(character)) continue;
+    if (!characterId || !isLexicalCharacter(character)) return;
 
     const romId = relationId(word.rom_id);
     const rom = romById.get(romId);
@@ -125,12 +188,11 @@ async function buildPayload() {
     const romanization = text(rom?.rom);
     const modernRomanization = text(rom?.modern_rom);
     const simpleRomanization = text(rom?.simple_romanization);
-
-    if (!characterRaw && !simplified && !romanization && !modernRomanization && !simpleRomanization) continue;
+    if (!characterRaw && !simplified && !romanization && !modernRomanization && !simpleRomanization) return;
 
     const line = occ.line == null || occ.line === '' ? null : String(occ.line);
-    const semanticKey = [page, line ?? '', wordId].join('|');
-    if (seen.has(semanticKey)) continue;
+    const semanticKey = [page, line ?? '', wordId, semanticSuffix].join('|');
+    if (seen.has(semanticKey)) return;
     seen.add(semanticKey);
 
     entries.push({
@@ -146,6 +208,50 @@ async function buildPayload() {
       modernRomanization,
       simpleRomanization,
     });
+  };
+
+  const compoundFirstPages = new Set<number>();
+
+  for (const occ of occurrences) {
+    const typology = normalizedTypology(occ.typology);
+    const wordId = relationId(occ.word);
+    const blankParticulaeRow = typology === 'particulae numerales' && blankAppendixDefinition(occ.latin_definition_2);
+    if (wordId && !blankParticulaeRow) addWordEntry(occ, wordId, 'occ-word');
+
+    const occId = relationId(occ.id);
+
+    // Antinomy appendix occurrences deliberately have no occ.word. Their two
+    // searchable lexical terms are obtained from the occurrence-backed
+    // chinese_rom_chinese_rom relation instead.
+    if (typology === 'antinomy') {
+      for (const junction of lexicalEvidenceByOcc.get(occId) ?? []) {
+        const relation = lexicalRelationById.get(relationId(junction.chinese_rom_chinese_rom_id));
+        if (!relation) continue;
+        const leftId = relationId(relation.chinese_rom_id);
+        const rightId = relationId(relation.related_chinese_rom_id);
+        if (leftId) addWordEntry(occ, leftId, `antinomy:${relationId(relation.id)}:left`);
+        if (rightId) addWordEntry(occ, rightId, `antinomy:${relationId(relation.id)}:right`);
+      }
+    }
+
+    // Compound appendix rows are searchable through the composite relation.
+    // Empty/null/nan rows remain intentionally absent from the search index,
+    // matching their blank visual representation.
+    if (typology === 'composti' && !blankAppendixDefinition(occ.latin_definition_2)) {
+      for (const junction of compositeEvidenceByOcc.get(occId) ?? []) {
+        const composite = compositeById.get(compositeRelationId(junction));
+        if (!composite) continue;
+        const secondId = relationId(composite.second_syllable);
+        if (secondId) addWordEntry(occ, secondId, `compound:${relationId(composite.id)}:second`);
+
+        const page = Number(occ.page);
+        const firstId = relationId(composite.first_syllable);
+        if (firstId && Number.isFinite(page) && !compoundFirstPages.has(Math.trunc(page))) {
+          compoundFirstPages.add(Math.trunc(page));
+          addWordEntry({ ...occ, line: 1 }, firstId, `compound:${Math.trunc(page)}:first`);
+        }
+      }
+    }
   }
 
   entries.sort((a, b) => {
