@@ -1,31 +1,23 @@
-# CHIND Documentation — Analysis annotated callouts fix
+# CHIN-DICTIONARY — Latin Analysis HTML/entity cache fix
 
-Incremental drag&drop patch to apply **after** `chind_documentation_analysis_patch.zip`.
+Incremental drag-and-drop patch.
 
-## What changes
+## Files changed
+- `usr/pages/data/latin-analysis-corpus.json.ts`
+- `usr/components/analysis/LatinAnalysis.tsx`
 
-The five Latin Analysis documentation screenshots now use the same annotation system already adopted by Dictionary, Index and Character Detail:
+## What it fixes
+`occ.latin_definition_2` contains HTML markup plus HTML entities such as `&sect;`, `&ccedil;`, `&macr;`, `&circ;`, `&nbsp;` and `&rsquo;`.
 
-- numbered callout buttons placed around the screenshot;
-- connector lines pointing to the exact UI area;
-- clicking a callout jumps to the corresponding short explanation below;
-- the target explanation briefly flashes for orientation.
+The corpus endpoint now:
+1. strips structural HTML markup;
+2. decodes named/numeric HTML entities before tokenisation;
+3. lets `§` act as an analytic boundary;
+4. lets decoded romanisations such as `çien¯` be rejected as complete tokens.
 
-Annotated figures added for:
+The previous endpoint was also served with `Cache-Control: public, max-age=3600`. The browser could therefore keep using a stale pre-fix corpus for one hour even after restarting Astro. This patch:
+- requests the corpus with `cache: 'no-store'`;
+- adds an analysis-schema query key to force a fresh cache key;
+- changes the dev/API response header to `Cache-Control: no-store, max-age=0`.
 
-1. common Filter bar;
-2. common Analysis Note sidebar;
-3. Overview;
-4. Explore words;
-5. Compare sections.
-
-The descriptions remain intentionally short and operational. Detailed methodological interpretation stays inside the Analysis Note panel of the analytical application itself.
-
-## Files overwritten
-
-- `usr/pages/documentation.astro`
-- `usr/components/documentation/documentation.css`
-
-The five Analysis screenshots are included again under `usr/public/images/chind/documentation/` so the patch is self-contained.
-
-No `core/**`, Directus endpoint, analysis logic, s:CMS configuration or database structure is modified.
+No Directus schema, core s:CMS file, or database content is changed.

@@ -368,7 +368,7 @@ export default function LatinAnalysis() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(withBase('/data/latin-analysis-corpus.json'))
+    fetch(`${withBase('/data/latin-analysis-corpus.json')}?analysisSchema=html-entities-v2`, { cache: 'no-store' })
       .then(response => {
         if (!response.ok) throw new Error(`Corpus request failed (${response.status}).`);
         return response.json();
