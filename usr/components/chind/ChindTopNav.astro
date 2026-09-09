@@ -11,6 +11,7 @@ const items = [
   { route: '/', label: 'HOME' },
   { route: '/documentation', label: 'DOCUMENTATION' },
   { route: '/characters', label: 'INDEX' },
+  { route: '/analysis', label: 'ANALYSIS' },
   { route: '/text-comparison', label: 'COMPARE' },
   { route: '/dictionary', label: 'DICTIONARY' },
   { route: '/credits', label: 'CREDITS' },
@@ -124,11 +125,11 @@ const items = [
   }
   .chind-global-links a {
     position: relative;
-    padding: 7px 16px;
+    padding: 7px 13px;
     border-right: 1px solid rgba(200, 154, 67, .42);
     color: var(--chind-nav-cream);
     text-decoration: none;
-    font-size: 11px;
+    font-size: 10px;
     letter-spacing: .07em;
   }
   .chind-global-links a:first-child { border-left: 1px solid rgba(200, 154, 67, .42); }
@@ -137,8 +138,8 @@ const items = [
   .chind-global-links a.active::after {
     content: '';
     position: absolute;
-    left: 14px;
-    right: 14px;
+    left: 12px;
+    right: 12px;
     bottom: 0;
     height: 2px;
     background: var(--chind-nav-gold);
@@ -147,7 +148,7 @@ const items = [
   .chind-global-rosette {
     width: 38px;
     height: 38px;
-    margin-left: 17px;
+    margin-left: 14px;
     display: grid;
     place-items: center;
     border: 1px solid var(--chind-nav-gold);
@@ -156,24 +157,17 @@ const items = [
     font-size: 22px;
   }
 
-  @media (max-width: 1080px) {
+  @media (max-width: 1140px) {
     .chind-global-nav { gap: 12px; padding-inline: 10px; }
     .chind-global-brand small { display: none; }
     .chind-global-brand strong { font-size: 18px; }
     .chind-global-seal { width: 42px; height: 42px; flex-basis: 42px; font-size: 14px; }
-    .chind-global-links a { padding-inline: 10px; font-size: 9px; }
+    .chind-global-links a { padding-inline: 9px; font-size: 8.5px; }
     .chind-global-rosette { display: none; }
   }
 
-  @media (max-width: 760px) {
-    .chind-global-nav {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-    .chind-global-links {
-      width: 100%;
-      overflow-x: auto;
-      padding-bottom: 4px;
-    }
+  @media (max-width: 800px) {
+    .chind-global-nav { align-items: flex-start; flex-direction: column; }
+    .chind-global-links { width: 100%; overflow-x: auto; padding-bottom: 4px; }
   }
 </style>

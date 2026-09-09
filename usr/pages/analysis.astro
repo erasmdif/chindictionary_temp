@@ -1,0 +1,32 @@
+---
+import SEO from '../../core/components/SEO/SEO.astro';
+import { siteMetadata } from '../user.config.mjs';
+import ChindTopNav from '../components/chind/ChindTopNav.astro';
+import { withBase } from '../components/chind/paths';
+import LatinAnalysisApp from '../components/analysis/LatinAnalysis';
+import '../components/analysis/latin-analysis.css';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <SEO
+      title="Latin lexical analysis · CHIND"
+      description="Explore frequency, distribution, concordances, recurring sequences and descriptive comparisons in the Latin definitions of CHIN-DICTIONARY."
+      siteMetadata={siteMetadata}
+    />
+    <link rel="icon" type="image/png" href={withBase('/images/favicon.png')} />
+    <style is:global>
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body { min-width: 320px; min-height: 100%; margin: 0; }
+      body { background: #f3ecdd; }
+      button, input, select, textarea { font: inherit; }
+      a { color: inherit; }
+    </style>
+  </head>
+  <body>
+    <ChindTopNav />
+    <LatinAnalysisApp client:load />
+  </body>
+</html>

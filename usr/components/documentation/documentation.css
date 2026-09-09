@@ -471,3 +471,48 @@ body {
     overflow: visible;
   }
 }
+
+/* Plain screenshots used by the Analysis documentation section. */
+.doc-screen-figure {
+  margin: 18px 0 4px;
+  padding: 14px;
+  border: 1px solid rgba(200, 159, 85, .34);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .3);
+}
+
+.doc-screen-figure a {
+  display: block;
+  line-height: 0;
+}
+
+.doc-screen-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 760px;
+  object-fit: contain;
+  object-position: left top;
+  border: 1px solid rgba(179, 151, 95, .4);
+  border-radius: 8px;
+  background: #fffdf7;
+}
+
+.doc-screen-figure--narrow img {
+  width: min(100%, 430px);
+  margin-inline: auto;
+}
+
+.doc-screen-figure figcaption {
+  margin-top: 10px;
+  color: var(--doc-muted);
+  font-size: .84rem;
+  line-height: 1.5;
+}
+
+/* Analysis Note is a portrait screenshot: keep the annotated figure compact
+   while preserving enough external gutter for the numbered callouts. */
+.doc-analysis-figure-narrow {
+  max-width: 820px;
+  margin-inline: auto;
+}

@@ -4,7 +4,6 @@ import { siteMetadata } from '../user.config.mjs';
 import ChindTopNav from '../components/chind/ChindTopNav.astro';
 import DocumentationFigure from '../components/documentation/DocumentationFigure.astro';
 import '../components/documentation/documentation.css';
-import { withBase } from '../components/chind/paths';
 
 const dictionaryPageCallouts = [
   { number: 1, title: 'Page navigation', href: '#dict-page-1', anchorLeft: 49, anchorTop: 4, boxLeft: 80, boxTop: 8, boxWidth: '11rem' },
@@ -80,6 +79,54 @@ const characterBottomCallouts = [
   { number: 3, title: 'Documentary evidence', href: '#char-bottom-3', anchorLeft: 52, anchorTop: 72, boxLeft: 49, boxTop: 104, boxWidth: '10rem' },
   { number: 4, title: 'Notes & sources', href: '#char-bottom-4', anchorLeft: 11, anchorTop: 91, boxLeft: 15, boxTop: 104, boxWidth: '9rem' },
 ];
+
+
+const analysisFilterCallouts = [
+  { number: 1, title: 'Corpus', href: '#analysis-filter-1', anchorLeft: 10, anchorTop: 50, boxLeft: 7, boxTop: -42, boxWidth: '8rem' },
+  { number: 2, title: 'Page range', href: '#analysis-filter-2', anchorLeft: 24, anchorTop: 50, boxLeft: 24, boxTop: -42, boxWidth: '8rem' },
+  { number: 3, title: 'Typology', href: '#analysis-filter-3', anchorLeft: 38, anchorTop: 50, boxLeft: 41, boxTop: -42, boxWidth: '8rem' },
+  { number: 4, title: 'Word groups', href: '#analysis-filter-4', anchorLeft: 47, anchorTop: 50, boxLeft: 57, boxTop: -42, boxWidth: '8.5rem' },
+  { number: 5, title: 'Function words', href: '#analysis-filter-5', anchorLeft: 70, anchorTop: 48, boxLeft: 45, boxTop: 143, boxWidth: '9.5rem' },
+  { number: 6, title: 'Word exclusions', href: '#analysis-filter-6', anchorLeft: 79, anchorTop: 50, boxLeft: 63, boxTop: 143, boxWidth: '9.5rem' },
+  { number: 7, title: 'Apply filters', href: '#analysis-filter-7', anchorLeft: 91, anchorTop: 50, boxLeft: 81, boxTop: 143, boxWidth: '8.5rem' },
+  { number: 8, title: 'Cleaning audit', href: '#analysis-filter-8', anchorLeft: 91, anchorTop: 72, boxLeft: 99, boxTop: 143, boxWidth: '9rem' },
+];
+
+const analysisNoteCallouts = [
+  { number: 1, title: 'Close panel', href: '#analysis-note-1', anchorLeft: 94, anchorTop: 4, boxLeft: 128, boxTop: 4, boxWidth: '8rem' },
+  { number: 2, title: 'Purpose', href: '#analysis-note-2', anchorLeft: 50, anchorTop: 26, boxLeft: -28, boxTop: 23, boxWidth: '8rem' },
+  { number: 3, title: 'Method', href: '#analysis-note-3', anchorLeft: 50, anchorTop: 47, boxLeft: 128, boxTop: 43, boxWidth: '8rem' },
+  { number: 4, title: 'How to read', href: '#analysis-note-4', anchorLeft: 50, anchorTop: 66, boxLeft: -28, boxTop: 64, boxWidth: '9rem' },
+  { number: 5, title: 'References', href: '#analysis-note-5', anchorLeft: 50, anchorTop: 82, boxLeft: 128, boxTop: 80, boxWidth: '8rem' },
+  { number: 6, title: 'Open documentation', href: '#analysis-note-6', anchorLeft: 27, anchorTop: 94, boxLeft: -28, boxTop: 101, boxWidth: '10rem' },
+  { number: 7, title: 'View evidence', href: '#analysis-note-7', anchorLeft: 72, anchorTop: 94, boxLeft: 128, boxTop: 101, boxWidth: '9rem' },
+];
+
+const analysisOverviewCallouts = [
+  { number: 1, title: 'Corpus counters', href: '#analysis-overview-1', anchorLeft: 50, anchorTop: 10, boxLeft: 50, boxTop: -8, boxWidth: '10rem' },
+  { number: 2, title: 'Frequency ranking', href: '#analysis-overview-2', anchorLeft: 24, anchorTop: 48, boxLeft: -2, boxTop: 42, boxWidth: '10rem' },
+  { number: 3, title: 'Select a form', href: '#analysis-overview-3', anchorLeft: 7, anchorTop: 36, boxLeft: -2, boxTop: 72, boxWidth: '9rem' },
+  { number: 4, title: 'Distribution chart', href: '#analysis-overview-4', anchorLeft: 75, anchorTop: 43, boxLeft: 102, boxTop: 35, boxWidth: '10rem' },
+  { number: 5, title: 'Length & repetition', href: '#analysis-overview-5', anchorLeft: 75, anchorTop: 78, boxLeft: 101, boxTop: 82, boxWidth: '10rem' },
+];
+
+const analysisExploreCallouts = [
+  { number: 1, title: 'Concordances', href: '#analysis-explore-1', anchorLeft: 49, anchorTop: 26, boxLeft: -3, boxTop: 23, boxWidth: '9rem' },
+  { number: 2, title: 'Concordance pager', href: '#analysis-explore-2', anchorLeft: 94, anchorTop: 3, boxLeft: 101, boxTop: -8, boxWidth: '10rem' },
+  { number: 3, title: 'Nearby controls', href: '#analysis-explore-3', anchorLeft: 39, anchorTop: 64, boxLeft: -3, boxTop: 64, boxWidth: '9rem' },
+  { number: 4, title: 'Nearby pager', href: '#analysis-explore-4', anchorLeft: 45, anchorTop: 70, boxLeft: 24, boxTop: 105, boxWidth: '9rem' },
+  { number: 5, title: 'Sequence settings', href: '#analysis-explore-5', anchorLeft: 71, anchorTop: 73, boxLeft: 66, boxTop: 105, boxWidth: '10rem' },
+  { number: 6, title: 'Run analysis', href: '#analysis-explore-6', anchorLeft: 57, anchorTop: 79, boxLeft: 48, boxTop: 105, boxWidth: '9rem' },
+  { number: 7, title: 'Sequence results', href: '#analysis-explore-7', anchorLeft: 80, anchorTop: 90, boxLeft: 101, boxTop: 86, boxWidth: '10rem' },
+];
+
+const analysisCompareCallouts = [
+  { number: 1, title: 'Corpus X', href: '#analysis-compare-1', anchorLeft: 23, anchorTop: 16, boxLeft: 18, boxTop: -8, boxWidth: '8rem' },
+  { number: 2, title: 'Corpus Y / rest', href: '#analysis-compare-2', anchorLeft: 72, anchorTop: 16, boxLeft: 74, boxTop: -8, boxWidth: '10rem' },
+  { number: 3, title: 'Ranking views', href: '#analysis-compare-3', anchorLeft: 78, anchorTop: 35, boxLeft: 101, boxTop: 31, boxWidth: '9rem' },
+  { number: 4, title: 'Comparison table', href: '#analysis-compare-4', anchorLeft: 50, anchorTop: 65, boxLeft: -2, boxTop: 63, boxWidth: '10rem' },
+  { number: 5, title: 'Result pagination', href: '#analysis-compare-5', anchorLeft: 95, anchorTop: 35, boxLeft: 101, boxTop: 69, boxWidth: '10rem' },
+];
 ---
 <!doctype html>
 <html lang="en">
@@ -91,7 +138,7 @@ const characterBottomCallouts = [
       description="Interface guide and reading manual for the CHIND digital edition."
       siteMetadata={siteMetadata}
     />
-    <link rel="icon" type="image/png" href={withBase('/images/favicon.png')} />
+    <link rel="icon" type="image/png" href="/images/favicon.png" />
   </head>
   <body>
     <ChindTopNav />
@@ -114,6 +161,16 @@ const characterBottomCallouts = [
               </li>
               <li class="doc-nav-item">
                 <a href="#text-comparison">Text comparison</a>
+              </li>
+              <li class="doc-nav-item">
+                <a href="#analysis">Analysis</a>
+                <ul class="doc-nav-sub">
+                  <li><a href="#analysis-filters">Filter bar</a></li>
+                  <li><a href="#analysis-note">Analysis Note</a></li>
+                  <li><a href="#analysis-overview">Overview</a></li>
+                  <li><a href="#analysis-explore">Explore words</a></li>
+                  <li><a href="#analysis-compare">Compare sections</a></li>
+                </ul>
               </li>
               <li class="doc-nav-item">
                 <a href="#dictionary">Dictionary</a>
@@ -150,7 +207,7 @@ const characterBottomCallouts = [
             <h1>Using the CHIND interface</h1>
             <p>
               This section explains how to navigate the digital environment dedicated to Basilio Brollo’s <em>Dictionarium sinico-latinum</em>.
-              The documentation is organised by page type: Home, Text Comparison, Dictionary, Index, Character Detail, and Credits.
+              The documentation is organised by page type: Home, Text Comparison, Analysis, Dictionary, Index, Character Detail, and Credits.
               Each figure below is interactive: the numbered labels open the corresponding explanatory note.
             </p>
             <div class="doc-intro-grid">
@@ -220,6 +277,229 @@ const characterBottomCallouts = [
             </div>
           </section>
 
+          <section class="doc-section" id="analysis">
+            <h2>Latin lexical analysis</h2>
+            <p class="doc-lead">
+              The Analysis page provides an exploratory interface for the Latin text stored in the dictionary definitions.
+              The figures below use the same numbered guide adopted elsewhere in this documentation: click a label on the screenshot to jump to the related instruction.
+            </p>
+
+            <div class="doc-subgroup" id="analysis-filters">
+              <h3>Common controls · Filter bar</h3>
+              <p>The filter bar defines the corpus used by all three analysis tabs.</p>
+              <DocumentationFigure
+                src="/images/chind/documentation/analysis-filter-bar.png"
+                alt="Annotated filter bar of the Latin lexical analysis interface"
+                caption="The common filter bar controls where to search, what to group, and which forms to exclude."
+                callouts={analysisFilterCallouts}
+                leftGutter="72px"
+                rightGutter="104px"
+                topGutter="102px"
+                bottomGutter="112px"
+              />
+              <div class="doc-notes">
+                <section class="doc-note" id="analysis-filter-1">
+                  <h4><span class="doc-step-badge">1</span> Corpus</h4>
+                  <p>Choose the general corpus scope before applying more specific filters.</p>
+                </section>
+                <section class="doc-note" id="analysis-filter-2">
+                  <h4><span class="doc-step-badge">2</span> Page range</h4>
+                  <p>Set the first and last dictionary page to restrict the analysis to a continuous range.</p>
+                </section>
+                <section class="doc-note" id="analysis-filter-3">
+                  <h4><span class="doc-step-badge">3</span> Typology</h4>
+                  <p>Limit the corpus to one occurrence typology, or leave all typologies active.</p>
+                </section>
+                <section class="doc-note" id="analysis-filter-4">
+                  <h4><span class="doc-step-badge">4</span> Word groups</h4>
+                  <p><strong>Edit groups</strong> creates or changes user-defined groups of forms that can be followed together.</p>
+                </section>
+                <section class="doc-note" id="analysis-filter-5">
+                  <h4><span class="doc-step-badge">5</span> Function words</h4>
+                  <p>Function words are excluded by default. Switch this control on when they are part of the research question.</p>
+                </section>
+                <section class="doc-note" id="analysis-filter-6">
+                  <h4><span class="doc-step-badge">6</span> Word exclusions</h4>
+                  <p><strong>Edit exclusions</strong> adds or removes user-defined forms from the analytical corpus.</p>
+                </section>
+                <section class="doc-note" id="analysis-filter-7">
+                  <h4><span class="doc-step-badge">7</span> Apply filters</h4>
+                  <p>Press <strong>Apply filters</strong> after changing the corpus controls to rebuild the current analytical view.</p>
+                </section>
+                <section class="doc-note" id="analysis-filter-8">
+                  <h4><span class="doc-step-badge">8</span> Cleaning audit</h4>
+                  <p><strong>Review text cleaning</strong> opens the list of excluded or cleaned tokens for a quick quality check.</p>
+                </section>
+              </div>
+            </div>
+
+            <div class="doc-subgroup" id="analysis-note">
+              <h3>Common controls · Analysis Note</h3>
+              <p>The Analysis Note gives the methodological context for the currently selected chart or table.</p>
+              <div class="doc-analysis-figure-narrow">
+                <DocumentationFigure
+                  src="/images/chind/documentation/analysis-info-page.png"
+                  alt="Annotated Analysis Note sidebar"
+                  caption="The information panel explains how to interpret a result and provides links back to evidence and documentation."
+                  callouts={analysisNoteCallouts}
+                  leftGutter="172px"
+                  rightGutter="172px"
+                  topGutter="34px"
+                  bottomGutter="40px"
+                />
+              </div>
+              <div class="doc-notes">
+                <section class="doc-note" id="analysis-note-1">
+                  <h4><span class="doc-step-badge">1</span> Close panel</h4>
+                  <p>Close the sidebar without changing the selected analysis or active filters.</p>
+                </section>
+                <section class="doc-note" id="analysis-note-2">
+                  <h4><span class="doc-step-badge">2</span> Purpose</h4>
+                  <p>A short statement of the question the selected analysis is designed to answer.</p>
+                </section>
+                <section class="doc-note" id="analysis-note-3">
+                  <h4><span class="doc-step-badge">3</span> Method</h4>
+                  <p>Shows the calculation or counting rule used for the current result.</p>
+                </section>
+                <section class="doc-note" id="analysis-note-4">
+                  <h4><span class="doc-step-badge">4</span> How to read</h4>
+                  <p>Provides the main interpretative cautions. Use this panel for detail rather than relying on the graph alone.</p>
+                </section>
+                <section class="doc-note" id="analysis-note-5">
+                  <h4><span class="doc-step-badge">5</span> References</h4>
+                  <p>Lists the methodological sources associated with the selected analysis.</p>
+                </section>
+                <section class="doc-note" id="analysis-note-6">
+                  <h4><span class="doc-step-badge">6</span> Open documentation</h4>
+                  <p>Returns to the relevant documentation section for interface-level guidance.</p>
+                </section>
+                <section class="doc-note" id="analysis-note-7">
+                  <h4><span class="doc-step-badge">7</span> View evidence</h4>
+                  <p>When available, opens the underlying attestations behind the numerical result.</p>
+                </section>
+              </div>
+            </div>
+
+            <div class="doc-subgroup" id="analysis-overview">
+              <h3>Overview</h3>
+              <p>Overview gives a quick description of the currently filtered Latin corpus.</p>
+              <DocumentationFigure
+                src="/images/chind/documentation/analysis-overview.png"
+                alt="Annotated Overview tab of the Latin lexical analysis dashboard"
+                caption="Overview combines corpus totals, frequency ranking, distribution across pages, and definition-length descriptors."
+                callouts={analysisOverviewCallouts}
+                leftGutter="112px"
+                rightGutter="126px"
+                topGutter="72px"
+                bottomGutter="54px"
+              />
+              <div class="doc-notes">
+                <section class="doc-note" id="analysis-overview-1">
+                  <h4><span class="doc-step-badge">1</span> Corpus counters</h4>
+                  <p>These cards summarise accepted tokens, distinct forms, analysable entries and hapax forms.</p>
+                </section>
+                <section class="doc-note" id="analysis-overview-2">
+                  <h4><span class="doc-step-badge">2</span> Frequency ranking</h4>
+                  <p>The table ranks forms by frequency. Use its pager to move beyond the first ten results.</p>
+                </section>
+                <section class="doc-note" id="analysis-overview-3">
+                  <h4><span class="doc-step-badge">3</span> Select a form</h4>
+                  <p>Click a form in the ranking to make it the focus of the distribution and word-exploration tools.</p>
+                </section>
+                <section class="doc-note" id="analysis-overview-4">
+                  <h4><span class="doc-step-badge">4</span> Distribution chart</h4>
+                  <p>Shows how the selected form is distributed through page intervals in the dictionary.</p>
+                </section>
+                <section class="doc-note" id="analysis-overview-5">
+                  <h4><span class="doc-step-badge">5</span> Length and repetition</h4>
+                  <p>Summarises definition length and gives a compact descriptive indication of lexical repetition.</p>
+                </section>
+              </div>
+            </div>
+
+            <div class="doc-subgroup" id="analysis-explore">
+              <h3>Explore words</h3>
+              <p>Explore words follows the selected form or group through its contexts and recurrent local patterns.</p>
+              <DocumentationFigure
+                src="/images/chind/documentation/analysis-explore-words.png"
+                alt="Annotated Explore words tab with concordances, nearby words and recurring sequences"
+                caption="Use the pagers and controls to move through concordances, nearby forms and recurring sequences without leaving the selected word."
+                callouts={analysisExploreCallouts}
+                leftGutter="118px"
+                rightGutter="132px"
+                topGutter="76px"
+                bottomGutter="82px"
+              />
+              <div class="doc-notes">
+                <section class="doc-note" id="analysis-explore-1">
+                  <h4><span class="doc-step-badge">1</span> Concordances</h4>
+                  <p>Shows the selected form in its left and right textual context. The locus link opens the relevant dictionary page and line.</p>
+                </section>
+                <section class="doc-note" id="analysis-explore-2">
+                  <h4><span class="doc-step-badge">2</span> Concordance pager</h4>
+                  <p>Use the arrows to browse the complete concordance list in fixed-size pages.</p>
+                </section>
+                <section class="doc-note" id="analysis-explore-3">
+                  <h4><span class="doc-step-badge">3</span> Nearby controls</h4>
+                  <p>Choose a ±3 or ±5-token window and optionally hide forms that belong to the focal group itself.</p>
+                </section>
+                <section class="doc-note" id="analysis-explore-4">
+                  <h4><span class="doc-step-badge">4</span> Nearby pager</h4>
+                  <p>Browse additional associated forms without expanding the full page vertically.</p>
+                </section>
+                <section class="doc-note" id="analysis-explore-5">
+                  <h4><span class="doc-step-badge">5</span> Sequence settings</h4>
+                  <p>Set n-gram length and the minimum numbers of occurrences and entries before running the search.</p>
+                </section>
+                <section class="doc-note" id="analysis-explore-6">
+                  <h4><span class="doc-step-badge">6</span> Run sequence analysis</h4>
+                  <p>Press the button after changing the sequence parameters to calculate a new result set.</p>
+                </section>
+                <section class="doc-note" id="analysis-explore-7">
+                  <h4><span class="doc-step-badge">7</span> Sequence results</h4>
+                  <p>The table lists recurrent sequences, their counts and examples; use its pager to continue through the ranking.</p>
+                </section>
+              </div>
+            </div>
+
+            <div class="doc-subgroup" id="analysis-compare">
+              <h3>Compare sections</h3>
+              <p>Compare sections contrasts the relative frequency of forms in two corpus selections.</p>
+              <DocumentationFigure
+                src="/images/chind/documentation/analysis-compare-sections.png"
+                alt="Annotated Compare sections tab with Corpus X and Corpus Y controls"
+                caption="Define the two corpora, choose the ranking direction, then browse the complete comparison table."
+                callouts={analysisCompareCallouts}
+                leftGutter="118px"
+                rightGutter="132px"
+                topGutter="70px"
+                bottomGutter="54px"
+              />
+              <div class="doc-notes">
+                <section class="doc-note" id="analysis-compare-1">
+                  <h4><span class="doc-step-badge">1</span> Corpus X</h4>
+                  <p>Define the first comparison corpus with its page range and typology.</p>
+                </section>
+                <section class="doc-note" id="analysis-compare-2">
+                  <h4><span class="doc-step-badge">2</span> Corpus Y or rest</h4>
+                  <p>Define a second corpus manually, or compare X automatically against the rest of the currently filtered dictionary.</p>
+                </section>
+                <section class="doc-note" id="analysis-compare-3">
+                  <h4><span class="doc-step-badge">3</span> Ranking views</h4>
+                  <p>Switch between forms more frequent in X, more frequent in Y, and forms observed only in one selection.</p>
+                </section>
+                <section class="doc-note" id="analysis-compare-4">
+                  <h4><span class="doc-step-badge">4</span> Comparison table</h4>
+                  <p>Reports raw counts, normalised frequencies, differences and descriptive ratios for each form.</p>
+                </section>
+                <section class="doc-note" id="analysis-compare-5">
+                  <h4><span class="doc-step-badge">5</span> Result pagination</h4>
+                  <p>Use the arrows to move through the full ranking rather than only the first ten forms.</p>
+                </section>
+              </div>
+            </div>
+          </section>
+
           <section class="doc-section" id="dictionary">
             <h2>Dictionary</h2>
             <p class="doc-lead">
@@ -235,7 +515,7 @@ const characterBottomCallouts = [
               </p>
 
               <DocumentationFigure
-                src={withBase('/images/chind/documentation/dictionary-page.png')}
+                src="/images/chind/documentation/dictionary-page.png"
                 alt="Annotated example of the dictionary page layout"
                 caption="Annotated example of the page-level dictionary browser. Click a numbered label to jump to the related explanation below."
                 callouts={dictionaryPageCallouts}
@@ -285,7 +565,7 @@ const characterBottomCallouts = [
               </p>
 
               <DocumentationFigure
-                src={withBase('/images/chind/documentation/dictionary-row.png')}
+                src="/images/chind/documentation/dictionary-row.png"
                 alt="Annotated example of a single dictionary row"
                 caption="A single row can contain the main reading, alternative readings, definitions, glosses and cross-references."
                 callouts={dictionaryRowCallouts}
@@ -339,7 +619,7 @@ const characterBottomCallouts = [
               <h3>General layout</h3>
               <p>The overview figure highlights the main navigational logic of the character index.</p>
               <DocumentationFigure
-                src={withBase('/images/chind/documentation/characters-overview.png')}
+                src="/images/chind/documentation/characters-overview.png"
                 alt="Annotated example of the general character index layout"
                 caption="The character index is organised around a radical × stroke matrix, supplemented by filtering controls and a selected-character sidebar."
                 callouts={charactersOverviewCallouts}
@@ -377,7 +657,7 @@ const characterBottomCallouts = [
               <h3>Detail of the results table</h3>
               <p>The table translates a selected radical × stroke cell into a browsable list of characters.</p>
               <DocumentationFigure
-                src={withBase('/images/chind/documentation/characters-table.png')}
+                src="/images/chind/documentation/characters-table.png"
                 alt="Annotated example of the selected-cell results table"
                 caption="Each row in the results table opens a path toward either the dictionary browser or the full character record."
                 callouts={charactersTableCallouts}
@@ -414,7 +694,7 @@ const characterBottomCallouts = [
               <h3>Detail of the analytics bar</h3>
               <p>The lower analytics area condenses the most useful aggregate views for the current filtered subset.</p>
               <DocumentationFigure
-                src={withBase('/images/chind/documentation/characters-analytics.png')}
+                src="/images/chind/documentation/characters-analytics.png"
                 alt="Annotated example of the lower analytics charts"
                 caption="These charts react to the active filters and help the reader understand the distributional profile of the current subset."
                 callouts={charactersAnalyticsCallouts}
@@ -449,7 +729,7 @@ const characterBottomCallouts = [
               <h3>Upper section</h3>
               <p>The upper part of the page combines navigation, summary data, definitions, and the graph of lexical relations.</p>
               <DocumentationFigure
-                src={withBase('/images/chind/documentation/character-detail-top.png')}
+                src="/images/chind/documentation/character-detail-top.png"
                 alt="Annotated example of the upper part of a character record"
                 caption="The upper section is designed for orientation: it identifies the character and immediately exposes its main readings, relations and loci."
                 callouts={characterTopCallouts}
@@ -486,7 +766,7 @@ const characterBottomCallouts = [
               <h3>Lower section</h3>
               <p>The lower half of the page concentrates the denser supporting material: compounds, graphic history, documentary loci, and notes.</p>
               <DocumentationFigure
-                src={withBase('/images/chind/documentation/character-detail-bottom.png')}
+                src="/images/chind/documentation/character-detail-bottom.png"
                 alt="Annotated example of the lower part of a character record"
                 caption="The lower section stores the most specialised material and makes it traceable back to the documentary evidence."
                 callouts={characterBottomCallouts}

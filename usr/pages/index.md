@@ -85,20 +85,26 @@ description: "Digital edition and research environment for Basilio Brollo’s Di
         <p>Explore characters by historical or modern radical and stroke count, then open detailed records with readings, definitions, documentary evidence, graphic forms, and relationship maps.</p>
         <i>Open character index →</i>
       </a>
-      <a class="ch-home-tool" href="text-comparison">
+      <a class="ch-home-tool" href="analysis">
         <span class="ch-home-tool-no">03</span>
+        <strong>Latin lexical analysis</strong>
+        <p>Explore the Latin definitions through corpus cleaning, frequency and dispersion, concordances, recurrent sequences, local lexical contexts, definition length, and descriptive comparisons between portions of the dictionary.</p>
+        <i>Open lexical analysis →</i>
+      </a>
+      <a class="ch-home-tool" href="text-comparison">
+        <span class="ch-home-tool-no">04</span>
         <strong>Text comparison</strong>
         <p>Compare an external Chinese text with the dictionary and distinguish directly attested characters, historical graphic forms, documented variants, absent forms, and recognised disyllabic units.</p>
         <i>Open comparison tool →</i>
       </a>
       <a class="ch-home-tool" href="documentation">
-        <span class="ch-home-tool-no">04</span>
+        <span class="ch-home-tool-no">05</span>
         <strong>Documentation</strong>
         <p>Read a guided explanation of the interface, data representation, dictionary rows, index visualisations, character records, and the text-comparison workflow.</p>
         <i>Read documentation →</i>
       </a>
       <a class="ch-home-tool" href="credits">
-        <span class="ch-home-tool-no">05</span>
+        <span class="ch-home-tool-no">06</span>
         <strong>Credits</strong>
         <p>Project team, participating institutions, research infrastructure, acknowledgements, and attribution of external scholarly resources.</p>
         <i>View credits →</i>
