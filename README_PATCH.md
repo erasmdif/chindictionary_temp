@@ -1,23 +1,21 @@
-# CHIN-DICTIONARY — Latin Analysis HTML/entity cache fix
+# CHIND Documentation — GitHub Pages image base-path fix
 
-Incremental drag-and-drop patch.
+## Cosa corregge
 
-## Files changed
-- `usr/pages/data/latin-analysis-corpus.json.ts`
-- `usr/components/analysis/LatinAnalysis.tsx`
+La Documentation usava percorsi assoluti `/images/...` per gli screenshot. Su GitHub Project Pages questi percorsi puntano alla root dell'account invece che al `BASE_URL` del progetto, producendo 404.
 
-## What it fixes
-`occ.latin_definition_2` contains HTML markup plus HTML entities such as `&sect;`, `&ccedil;`, `&macr;`, `&circ;`, `&nbsp;` and `&rsquo;`.
+La patch fa passare tutti gli asset della pagina Documentation attraverso il helper CHIND `withBase()` già presente nel progetto.
 
-The corpus endpoint now:
-1. strips structural HTML markup;
-2. decodes named/numeric HTML entities before tokenisation;
-3. lets `§` act as an analytic boundary;
-4. lets decoded romanisations such as `çien¯` be rejected as complete tokens.
+Esempio:
 
-The previous endpoint was also served with `Cache-Control: public, max-age=3600`. The browser could therefore keep using a stale pre-fix corpus for one hour even after restarting Astro. This patch:
-- requests the corpus with `cache: 'no-store'`;
-- adds an analysis-schema query key to force a fresh cache key;
-- changes the dev/API response header to `Cache-Control: no-store, max-age=0`.
+- locale: `/images/chind/documentation/dictionary-page.png`
+- GitHub Project Page: `/chindictionary_temp/images/chind/documentation/dictionary-page.png` (o il base configurato nel build)
+- custom domain/root: `/images/chind/documentation/dictionary-page.png`
 
-No Directus schema, core s:CMS file, or database content is changed.
+Corregge anche il favicon della pagina Documentation.
+
+## File modificato
+
+- `usr/pages/documentation.astro`
+
+Nessuna modifica a `core/**`, Directus, endpoint o configurazione s:CMS.

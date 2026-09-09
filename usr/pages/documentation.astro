@@ -3,6 +3,7 @@ import SEO from '../../core/components/SEO/SEO.astro';
 import { siteMetadata } from '../user.config.mjs';
 import ChindTopNav from '../components/chind/ChindTopNav.astro';
 import DocumentationFigure from '../components/documentation/DocumentationFigure.astro';
+import { withBase } from '../components/chind/paths';
 import '../components/documentation/documentation.css';
 
 const dictionaryPageCallouts = [
@@ -138,7 +139,7 @@ const analysisCompareCallouts = [
       description="Interface guide and reading manual for the CHIND digital edition."
       siteMetadata={siteMetadata}
     />
-    <link rel="icon" type="image/png" href="/images/favicon.png" />
+    <link rel="icon" type="image/png" href={withBase('/images/favicon.png')} />
   </head>
   <body>
     <ChindTopNav />
@@ -288,7 +289,7 @@ const analysisCompareCallouts = [
               <h3>Common controls · Filter bar</h3>
               <p>The filter bar defines the corpus used by all three analysis tabs.</p>
               <DocumentationFigure
-                src="/images/chind/documentation/analysis-filter-bar.png"
+                src={withBase('/images/chind/documentation/analysis-filter-bar.png')}
                 alt="Annotated filter bar of the Latin lexical analysis interface"
                 caption="The common filter bar controls where to search, what to group, and which forms to exclude."
                 callouts={analysisFilterCallouts}
@@ -338,7 +339,7 @@ const analysisCompareCallouts = [
               <p>The Analysis Note gives the methodological context for the currently selected chart or table.</p>
               <div class="doc-analysis-figure-narrow">
                 <DocumentationFigure
-                  src="/images/chind/documentation/analysis-info-page.png"
+                  src={withBase('/images/chind/documentation/analysis-info-page.png')}
                   alt="Annotated Analysis Note sidebar"
                   caption="The information panel explains how to interpret a result and provides links back to evidence and documentation."
                   callouts={analysisNoteCallouts}
@@ -384,7 +385,7 @@ const analysisCompareCallouts = [
               <h3>Overview</h3>
               <p>Overview gives a quick description of the currently filtered Latin corpus.</p>
               <DocumentationFigure
-                src="/images/chind/documentation/analysis-overview.png"
+                src={withBase('/images/chind/documentation/analysis-overview.png')}
                 alt="Annotated Overview tab of the Latin lexical analysis dashboard"
                 caption="Overview combines corpus totals, frequency ranking, distribution across pages, and definition-length descriptors."
                 callouts={analysisOverviewCallouts}
@@ -421,7 +422,7 @@ const analysisCompareCallouts = [
               <h3>Explore words</h3>
               <p>Explore words follows the selected form or group through its contexts and recurrent local patterns.</p>
               <DocumentationFigure
-                src="/images/chind/documentation/analysis-explore-words.png"
+                src={withBase('/images/chind/documentation/analysis-explore-words.png')}
                 alt="Annotated Explore words tab with concordances, nearby words and recurring sequences"
                 caption="Use the pagers and controls to move through concordances, nearby forms and recurring sequences without leaving the selected word."
                 callouts={analysisExploreCallouts}
@@ -466,7 +467,7 @@ const analysisCompareCallouts = [
               <h3>Compare sections</h3>
               <p>Compare sections contrasts the relative frequency of forms in two corpus selections.</p>
               <DocumentationFigure
-                src="/images/chind/documentation/analysis-compare-sections.png"
+                src={withBase('/images/chind/documentation/analysis-compare-sections.png')}
                 alt="Annotated Compare sections tab with Corpus X and Corpus Y controls"
                 caption="Define the two corpora, choose the ranking direction, then browse the complete comparison table."
                 callouts={analysisCompareCallouts}
@@ -515,7 +516,7 @@ const analysisCompareCallouts = [
               </p>
 
               <DocumentationFigure
-                src="/images/chind/documentation/dictionary-page.png"
+                src={withBase('/images/chind/documentation/dictionary-page.png')}
                 alt="Annotated example of the dictionary page layout"
                 caption="Annotated example of the page-level dictionary browser. Click a numbered label to jump to the related explanation below."
                 callouts={dictionaryPageCallouts}
@@ -565,7 +566,7 @@ const analysisCompareCallouts = [
               </p>
 
               <DocumentationFigure
-                src="/images/chind/documentation/dictionary-row.png"
+                src={withBase('/images/chind/documentation/dictionary-row.png')}
                 alt="Annotated example of a single dictionary row"
                 caption="A single row can contain the main reading, alternative readings, definitions, glosses and cross-references."
                 callouts={dictionaryRowCallouts}
@@ -619,7 +620,7 @@ const analysisCompareCallouts = [
               <h3>General layout</h3>
               <p>The overview figure highlights the main navigational logic of the character index.</p>
               <DocumentationFigure
-                src="/images/chind/documentation/characters-overview.png"
+                src={withBase('/images/chind/documentation/characters-overview.png')}
                 alt="Annotated example of the general character index layout"
                 caption="The character index is organised around a radical × stroke matrix, supplemented by filtering controls and a selected-character sidebar."
                 callouts={charactersOverviewCallouts}
@@ -657,7 +658,7 @@ const analysisCompareCallouts = [
               <h3>Detail of the results table</h3>
               <p>The table translates a selected radical × stroke cell into a browsable list of characters.</p>
               <DocumentationFigure
-                src="/images/chind/documentation/characters-table.png"
+                src={withBase('/images/chind/documentation/characters-table.png')}
                 alt="Annotated example of the selected-cell results table"
                 caption="Each row in the results table opens a path toward either the dictionary browser or the full character record."
                 callouts={charactersTableCallouts}
@@ -694,7 +695,7 @@ const analysisCompareCallouts = [
               <h3>Detail of the analytics bar</h3>
               <p>The lower analytics area condenses the most useful aggregate views for the current filtered subset.</p>
               <DocumentationFigure
-                src="/images/chind/documentation/characters-analytics.png"
+                src={withBase('/images/chind/documentation/characters-analytics.png')}
                 alt="Annotated example of the lower analytics charts"
                 caption="These charts react to the active filters and help the reader understand the distributional profile of the current subset."
                 callouts={charactersAnalyticsCallouts}
@@ -729,7 +730,7 @@ const analysisCompareCallouts = [
               <h3>Upper section</h3>
               <p>The upper part of the page combines navigation, summary data, definitions, and the graph of lexical relations.</p>
               <DocumentationFigure
-                src="/images/chind/documentation/character-detail-top.png"
+                src={withBase('/images/chind/documentation/character-detail-top.png')}
                 alt="Annotated example of the upper part of a character record"
                 caption="The upper section is designed for orientation: it identifies the character and immediately exposes its main readings, relations and loci."
                 callouts={characterTopCallouts}
@@ -766,7 +767,7 @@ const analysisCompareCallouts = [
               <h3>Lower section</h3>
               <p>The lower half of the page concentrates the denser supporting material: compounds, graphic history, documentary loci, and notes.</p>
               <DocumentationFigure
-                src="/images/chind/documentation/character-detail-bottom.png"
+                src={withBase('/images/chind/documentation/character-detail-bottom.png')}
                 alt="Annotated example of the lower part of a character record"
                 caption="The lower section stores the most specialised material and makes it traceable back to the documentary evidence."
                 callouts={characterBottomCallouts}
