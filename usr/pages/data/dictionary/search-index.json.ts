@@ -55,8 +55,8 @@ function occurrenceGlosses(row: AnyRecord): string[] {
   const values: string[] = [];
   for (const [field, value] of Object.entries(row)) {
     if (!/gloss/i.test(field) || value == null || value === '') continue;
-    const raw = text(value);
-    const clean = htmlToPlainText(raw) || raw;
+    const raw = text(value) ?? '';
+    const clean = htmlToPlainText(raw) ?? raw;
     const normalized = clean.normalize('NFKC').trim();
     if (!normalized || seen.has(normalized)) continue;
     seen.add(normalized);
