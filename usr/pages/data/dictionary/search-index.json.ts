@@ -7,6 +7,64 @@ type AnyRecord = Record<string, any>;
 
 const PAGE_LIMIT = 2500;
 const EDITORIAL_WORD_IDS = new Set(['249', '9696']);
+
+const HTML_ENTITY_MAP: Record<string, string> = {
+  quot: '"', amp: '&', apos: "'", lt: '<', gt: '>', nbsp: ' ', sect: '§', uml: '¨', macr: '¯', acute: '´', cedil: '¸',
+  agrave: 'à', aacute: 'á', acirc: 'â', atilde: 'ã', auml: 'ä', aring: 'å', aelig: 'æ', ccedil: 'ç',
+  egrave: 'è', eacute: 'é', ecirc: 'ê', euml: 'ë', igrave: 'ì', iacute: 'í', icirc: 'î', iuml: 'ï',
+  ntilde: 'ñ', ograve: 'ò', oacute: 'ó', ocirc: 'ô', otilde: 'õ', ouml: 'ö', oslash: 'ø',
+  ugrave: 'ù', uacute: 'ú', ucirc: 'û', uuml: 'ü', yacute: 'ý', yuml: 'ÿ',
+  OElig: 'Œ', oelig: 'œ', Scaron: 'Š', scaron: 'š', Yuml: 'Ÿ', circ: 'ˆ', tilde: '˜',
+  ensp: ' ', emsp: ' ', thinsp: ' ', zwnj: '', zwj: '', lrm: '', rlm: '', ndash: '–', mdash: '—',
+  lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”', hellip: '…', middot: '·',
+};
+
+function decodeHtmlEntities(input: string): string {
+  const decodeOnce = (value: string) => value.replace(
+    /&(#(?:x[0-9a-f]+|\d+)|[a-z][a-z0-9]+);/gi,
+    (full, entity: string) => {
+      if (entity[0] === '#') {
+        const hex = entity[1]?.toLowerCase() === 'x';
+        const rawNumber = entity.slice(hex ? 2 : 1);
+        const codePoint = Number.parseInt(rawNumber, hex ? 16 : 10);
+        if (!Number.isFinite(codePoint) || codePoint < 0 || codePoint > 0x10ffff) return ' ';
+        try { return String.fromCodePoint(codePoint); } catch { return ' '; }
+      }
+      return HTML_ENTITY_MAP[entity] ?? HTML_ENTITY_MAP[entity.toLowerCase()] ?? ' ';
+    },
+  );
+  return decodeOnce(decodeOnce(input));
+}
+
+function htmlToPlainText(value: any): string | null {
+  if (value == null || value === '') return null;
+  const withoutTags = String(value)
+    .replace(/<\s*br\s*\/?\s*>/gi, '\n')
+    .replace(/<\/(?:p|div|li|tr|h[1-6])\s*>/gi, '\n')
+    .replace(/<[^>]*>/g, ' ');
+  const clean = decodeHtmlEntities(withoutTags)
+    .replace(/[\t\f\v]+/g, ' ')
+    .replace(/ *\n */g, '\n')
+    .replace(/ {2,}/g, ' ')
+    .trim();
+  return clean || null;
+}
+
+function occurrenceGlosses(row: AnyRecord): string[] {
+  const seen = new Set<string>();
+  const values: string[] = [];
+  for (const [field, value] of Object.entries(row)) {
+    if (!/gloss/i.test(field) || value == null || value === '') continue;
+    const raw = text(value);
+    const clean = htmlToPlainText(raw) || raw;
+    const normalized = clean.normalize('NFKC').trim();
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    values.push(normalized);
+  }
+  return values;
+}
+
 const NON_LEXICAL_CHARACTER_SENTINELS = new Set([
   'null',
   'change_radical',
@@ -22,6 +80,26 @@ function relationId(value: any): string {
   if (value == null || value === '') return '';
   if (typeof value === 'object') return String(value.id ?? '');
   return String(value);
+}
+
+function currentAndOtherId(currentId: string, left: any, right: any): { sourceId: string; relatedId: string } {
+  const leftId = relationId(left);
+  const rightId = relationId(right);
+  if (currentId && leftId === currentId) return { sourceId: leftId, relatedId: rightId };
+  if (currentId && rightId === currentId) return { sourceId: rightId, relatedId: leftId };
+  return { sourceId: leftId, relatedId: rightId };
+}
+
+function indexBy(rows: AnyRecord[], field: string): Map<string, AnyRecord[]> {
+  const map = new Map<string, AnyRecord[]>();
+  for (const row of rows) {
+    const id = relationId(row[field]);
+    if (!id) continue;
+    const list = map.get(id) ?? [];
+    list.push(row);
+    map.set(id, list);
+  }
+  return map;
 }
 
 function text(value: any): string | null {
@@ -71,9 +149,9 @@ async function requestPaged(table: string, base: URLSearchParams): Promise<AnyRe
   return out;
 }
 
-async function readCollection(table: string, fields: readonly string[]): Promise<AnyRecord[]> {
+async function readCollection(table: string, fields: readonly string[] = []): Promise<AnyRecord[]> {
   const params = new URLSearchParams();
-  params.set('fields', fields.join(','));
+  if (fields.length) params.set('fields', fields.join(','));
   params.set('sort', 'id');
   try {
     return await requestPaged(table, params);
@@ -121,13 +199,15 @@ function naturalCompare(a: any, b: any): number {
 }
 
 async function buildPayload() {
-  const [occurrences, words, characters, romanisations, lexicalRelations, lexicalEvidence, composites] = await Promise.all([
-    readCollection('occ', ['id', 'page', 'line', 'word', 'typology', 'latin_definition_2']),
+  const [occurrences, words, characters, romanisations, graphicEvidence, graphicRelations, lexicalRelations, lexicalEvidence, composites] = await Promise.all([
+    readCollection('occ'),
     readCollection('chinese_rom', ['id', 'chinese_id', 'rom_id']),
     readCollection('chinese', ['id', 'car', 'simplified_chinese', 'link', 'link_nuovo']),
     readCollection('rom', ['id', 'rom', 'modern_rom', 'simple_romanization']),
+    readOptionalCollection('occ_chinese_chinese', ['id', 'occ_id', 'chinese_chinese_id']),
+    readOptionalCollection('chinese_chinese', ['id', 'chinese_id', 'related_chinese_id', 'typology']),
     readOptionalCollection('chinese_rom_chinese_rom', ['id', 'chinese_rom_id', 'related_chinese_rom_id', 'typology']),
-    readOptionalCollection('occ_chinese_rom_chinese_rom', ['id', 'occ_id', 'chinese_rom_chinese_rom_id']),
+    readOptionalCollection('occ_chinese_rom_chinese_rom', ['id', 'occ_id', 'chinese_rom_chinese_rom_id', 'position', 'internal']),
     readOptionalCollection('composite_words', ['id', 'first_syllable', 'second_syllable']),
   ]);
 
@@ -143,8 +223,10 @@ async function buildPayload() {
   const wordById = new Map(words.map(row => [relationId(row.id), row] as const));
   const characterById = new Map(characters.map(row => [relationId(row.id), row] as const));
   const romById = new Map(romanisations.map(row => [relationId(row.id), row] as const));
+  const graphicRelationById = new Map(graphicRelations.map(row => [relationId(row.id), row] as const));
   const lexicalRelationById = new Map(lexicalRelations.map(row => [relationId(row.id), row] as const));
   const compositeById = new Map(composites.map(row => [relationId(row.id), row] as const));
+  const graphicEvidenceByOcc = indexBy(graphicEvidence, 'occ_id');
   const lexicalEvidenceByOcc = new Map<string, AnyRecord[]>();
   for (const row of lexicalEvidence) {
     const occId = relationId(row.occ_id);
@@ -164,7 +246,8 @@ async function buildPayload() {
   }
 
   const seen = new Set<string>();
-  const entries: Array<Record<string, string | number | null>> = [];
+  const occurrencesWithEntries = new Set<string>();
+  const entries: Array<Record<string, any>> = [];
 
   const addWordEntry = (
     occ: AnyRecord,
@@ -191,10 +274,48 @@ async function buildPayload() {
     if (!characterRaw && !simplified && !romanization && !modernRomanization && !simpleRomanization) return;
 
     const line = occ.line == null || occ.line === '' ? null : String(occ.line);
+    const occId = relationId(occ.id);
+    const typology = normalizedTypology(occ.typology);
+    const glosses = occurrenceGlosses(occ);
+
+    const graphicVariants = (graphicEvidenceByOcc.get(occId) ?? []).flatMap(junction => {
+      const relation = graphicRelationById.get(relationId(junction.chinese_chinese_id));
+      if (!relation) return [];
+      const pair = currentAndOtherId(characterId, relation.chinese_id, relation.related_chinese_id);
+      const related = characterById.get(pair.relatedId);
+      if (!isLexicalCharacter(related)) return [];
+      return [{
+        character: text(related?.car),
+        simplified: text(related?.simplified_chinese),
+      }];
+    });
+
+    const synonyms = typology === 'antinomy' ? [] : (lexicalEvidenceByOcc.get(occId) ?? []).flatMap(junction => {
+      const internal = junction.internal;
+      if (internal === false || internal === 0 || String(internal).toLocaleLowerCase() === 'false') return [];
+      const position = text(junction.position);
+      if (!position || !['1', '2', '3', '4'].includes(position)) return [];
+      const relation = lexicalRelationById.get(relationId(junction.chinese_rom_chinese_rom_id));
+      if (!relation) return [];
+      const pair = currentAndOtherId(wordId, relation.chinese_rom_id, relation.related_chinese_rom_id);
+      const relatedWord = wordById.get(pair.relatedId);
+      if (!relatedWord) return [];
+      const relatedCharacter = characterById.get(relationId(relatedWord.chinese_id));
+      const relatedRom = romById.get(relationId(relatedWord.rom_id));
+      return [{
+        character: text(relatedCharacter?.car),
+        simplified: text(relatedCharacter?.simplified_chinese),
+        romanization: text(relatedRom?.rom),
+        modernRomanization: text(relatedRom?.modern_rom),
+        simpleRomanization: text(relatedRom?.simple_romanization),
+      }];
+    });
+
     const semanticKey = [page, line ?? '', wordId, semanticSuffix].join('|');
     if (seen.has(semanticKey)) return;
     seen.add(semanticKey);
 
+    occurrencesWithEntries.add(relationId(occ.id));
     entries.push({
       occurrenceId: relationId(occ.id) || null,
       page: Math.trunc(page),
@@ -207,6 +328,44 @@ async function buildPayload() {
       romanization,
       modernRomanization,
       simpleRomanization,
+      typology: text(occ.typology),
+      latinDefinition: htmlToPlainText(occ.latin_definition_2),
+      glosses,
+      graphicVariants,
+      synonyms,
+    });
+  };
+
+  const addDefinitionOnlyEntry = (occ: AnyRecord) => {
+    const page = Number(occ.page);
+    const latinDefinition = htmlToPlainText(occ.latin_definition_2);
+    const glosses = occurrenceGlosses(occ);
+    if (!Number.isFinite(page) || page < 1 || (!latinDefinition && !glosses.length)) return;
+    const normalized = (latinDefinition || '').normalize('NFKC').trim().toLocaleLowerCase();
+    if (latinDefinition && (!normalized || ['empty', 'null', 'nan', 'change radical', 'change_radical', 'empty page', 'empty_page'].includes(normalized))) {
+      if (!glosses.length) return;
+    }
+    const line = occ.line == null || occ.line === '' ? null : String(occ.line);
+    const semanticKey = [Math.trunc(page), line ?? '', relationId(occ.id), 'definition-only'].join('|');
+    if (seen.has(semanticKey)) return;
+    seen.add(semanticKey);
+    entries.push({
+      occurrenceId: relationId(occ.id) || null,
+      page: Math.trunc(page),
+      line,
+      wordId: null,
+      characterId: null,
+      character: null,
+      simplified: null,
+      glyphLink: null,
+      romanization: null,
+      modernRomanization: null,
+      simpleRomanization: null,
+      typology: text(occ.typology),
+      latinDefinition,
+      glosses,
+      graphicVariants: [],
+      synonyms: [],
     });
   };
 
@@ -252,6 +411,10 @@ async function buildPayload() {
         }
       }
     }
+
+    // Occurrences without a stable lexical relation still need to be searchable
+    // by their Latin definition or glosses (e.g. appendix rows under revision).
+    if (!occurrencesWithEntries.has(occId)) addDefinitionOnlyEntry(occ);
   }
 
   entries.sort((a, b) => {
@@ -277,7 +440,7 @@ export const GET: APIRoute = async () => {
   return new Response(JSON.stringify(payload), {
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600',
+      'Cache-Control': 'no-store',
     },
   });
 };

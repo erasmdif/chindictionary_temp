@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import type {
   AntinomyRelation,
@@ -10,6 +10,7 @@ import type {
   GraphicVariant,
   SynonymRelation,
 } from './pageTypes';
+import { downloadDictionaryExport, type DictionaryExportPayload, type DictionaryExportRecord, type ExportFormat } from './exportUtils';
 import './dictionary-page.css';
 
 const PAGE_CACHE_LIMIT = 3;
@@ -39,6 +40,17 @@ type Selection =
   | { kind: 'graphic'; item: GraphicVariant; occurrence: DictionaryPageOccurrence };
 
 
+type DictionarySearchRelationCharacter = {
+  character: string | null;
+  simplified: string | null;
+};
+
+type DictionarySearchSynonym = DictionarySearchRelationCharacter & {
+  romanization: string | null;
+  modernRomanization: string | null;
+  simpleRomanization: string | null;
+};
+
 type DictionarySearchEntry = {
   occurrenceId: string | number | null;
   page: number;
@@ -51,6 +63,11 @@ type DictionarySearchEntry = {
   romanization: string | null;
   modernRomanization: string | null;
   simpleRomanization: string | null;
+  typology: string | null;
+  latinDefinition: string | null;
+  glosses: string[];
+  graphicVariants: DictionarySearchRelationCharacter[];
+  synonyms: DictionarySearchSynonym[];
 };
 
 type DictionarySearchPayload = {
@@ -59,8 +76,29 @@ type DictionarySearchPayload = {
   entries: DictionarySearchEntry[];
 };
 
+type SearchResultRow = {
+  page: number;
+  line: string | number | null;
+  entries: DictionarySearchEntry[];
+  records: DictionaryExportRecord[];
+};
+
+type SearchField = 'all' | 'character' | 'romanisation' | 'definition' | 'glosses' | 'variants' | 'synonyms';
+
+const SEARCH_FIELD_OPTIONS: Array<{ value: SearchField; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'character', label: 'Character' },
+  { value: 'romanisation', label: 'Romanization' },
+  { value: 'definition', label: 'Definition' },
+  { value: 'glosses', label: 'Glosses' },
+  { value: 'variants', label: 'Variants' },
+  { value: 'synonyms', label: 'Synonyms' },
+];
+
 let searchIndexCache: DictionarySearchPayload | null = null;
 let searchIndexPromise: Promise<DictionarySearchPayload> | null = null;
+let exportIndexCache: DictionaryExportPayload | null = null;
+let exportIndexPromise: Promise<DictionaryExportPayload> | null = null;
 
 function text(value: unknown): string {
   return value == null ? '' : String(value);
@@ -595,13 +633,33 @@ function foldedSearch(value: unknown): string {
 
 function searchIndexUrl(): string {
   const base = import.meta.env.BASE_URL || '/';
-  return `${base.replace(/\/?$/, '/')}data/dictionary/search-index.json`;
+  return `${base.replace(/\/?$/, '/')}data/dictionary/search-index.json?v=relation-search-3`;
+}
+
+function exportIndexUrl(): string {
+  const base = import.meta.env.BASE_URL || '/';
+  return `${base.replace(/\/?$/, '/')}data/dictionary/export-index.json?v=structured-export-2`;
+}
+
+async function fetchExportIndex(): Promise<DictionaryExportPayload> {
+  if (exportIndexCache) return exportIndexCache;
+  if (!exportIndexPromise) {
+    exportIndexPromise = fetch(exportIndexUrl(), { cache: 'no-store' })
+      .then(async response => {
+        if (!response.ok) throw new Error(`Dictionary export index could not be loaded (HTTP ${response.status}).`);
+        const payload = await response.json() as DictionaryExportPayload;
+        exportIndexCache = payload;
+        return payload;
+      })
+      .finally(() => { exportIndexPromise = null; });
+  }
+  return exportIndexPromise;
 }
 
 async function fetchSearchIndex(): Promise<DictionarySearchPayload> {
   if (searchIndexCache) return searchIndexCache;
   if (!searchIndexPromise) {
-    searchIndexPromise = fetch(searchIndexUrl(), { cache: 'force-cache' })
+    searchIndexPromise = fetch(searchIndexUrl(), { cache: 'no-store' })
       .then(async response => {
         if (!response.ok) throw new Error(`Dictionary search index could not be loaded (HTTP ${response.status}).`);
         const payload = await response.json() as DictionarySearchPayload;
@@ -613,35 +671,321 @@ async function fetchSearchIndex(): Promise<DictionarySearchPayload> {
   return searchIndexPromise;
 }
 
-function searchScore(entry: DictionarySearchEntry, rawQuery: string): number | null {
+function searchScore(entry: DictionarySearchEntry, rawQuery: string, fields: SearchField[] = ['all']): number | null {
   const query = normalize(rawQuery);
   const foldedQuery = foldedSearch(rawQuery);
   if (!query) return null;
 
-  const characterValues = [entry.character, entry.simplified].filter(Boolean).map(value => normalize(value));
-  const romanValues = [entry.romanization, entry.modernRomanization, entry.simpleRomanization]
-    .filter(Boolean)
-    .map(value => normalize(value));
-  const foldedRomanValues = [entry.romanization, entry.modernRomanization, entry.simpleRomanization]
-    .filter(Boolean)
-    .map(foldedSearch);
+  const searchAll = fields.length === 0 || fields.includes('all');
+  const includesField = (field: Exclude<SearchField, 'all'>) => searchAll || fields.includes(field);
+  let best: number | null = null;
+  const consider = (score: number, matched: boolean) => {
+    if (matched && (best == null || score < best)) best = score;
+  };
+  const exactPrefixContains = (values: string[], exactScore: number, prefixScore: number, containsScore: number) => {
+    consider(exactScore, values.some(value => value === query));
+    consider(prefixScore, values.some(value => value.startsWith(query)));
+    consider(containsScore, values.some(value => value.includes(query)));
+  };
 
-  if (characterValues.some(value => value === query)) return 0;
-  if (romanValues.some(value => value === query)) return 1;
-  if (characterValues.some(value => value.startsWith(query))) return 2;
-  if (romanValues.some(value => value.startsWith(query))) return 3;
-  if (characterValues.some(value => value.includes(query))) return 4;
-  if (romanValues.some(value => value.includes(query))) return 5;
-  if (foldedQuery && foldedRomanValues.some(value => value === foldedQuery)) return 6;
-  if (foldedQuery && foldedRomanValues.some(value => value.startsWith(foldedQuery))) return 7;
-  if (foldedQuery && foldedRomanValues.some(value => value.includes(foldedQuery))) return 8;
-  return null;
+  if (includesField('character')) {
+    // Historical and simplified forms are intentionally searched together.
+    const values = [entry.character, entry.simplified].filter(Boolean).map(value => normalize(value));
+    exactPrefixContains(values, 0, 10, 20);
+  }
+
+  if (includesField('romanisation')) {
+    const values = [entry.romanization, entry.modernRomanization, entry.simpleRomanization]
+      .filter(Boolean)
+      .map(value => normalize(value));
+    const foldedValues = [entry.romanization, entry.modernRomanization, entry.simpleRomanization]
+      .filter(Boolean)
+      .map(foldedSearch);
+    exactPrefixContains(values, 1, 11, 21);
+    if (foldedQuery) {
+      consider(30, foldedValues.some(value => value === foldedQuery));
+      consider(31, foldedValues.some(value => value.startsWith(foldedQuery)));
+      consider(32, foldedValues.some(value => value.includes(foldedQuery)));
+    }
+  }
+
+  if (includesField('variants')) {
+    // Graphic variants also match their simplified Chinese form.
+    const values = (entry.graphicVariants ?? [])
+      .flatMap(item => [item.character, item.simplified])
+      .filter(Boolean)
+      .map(value => normalize(value));
+    exactPrefixContains(values, 2, 12, 22);
+  }
+
+  if (includesField('synonyms')) {
+    // Synonyms match historical/simplified characters and all available readings.
+    const characterValues = (entry.synonyms ?? [])
+      .flatMap(item => [item.character, item.simplified])
+      .filter(Boolean)
+      .map(value => normalize(value));
+    const romanValues = (entry.synonyms ?? [])
+      .flatMap(item => [item.romanization, item.modernRomanization, item.simpleRomanization])
+      .filter(Boolean)
+      .map(value => normalize(value));
+    const foldedRomanValues = (entry.synonyms ?? [])
+      .flatMap(item => [item.romanization, item.modernRomanization, item.simpleRomanization])
+      .filter(Boolean)
+      .map(foldedSearch);
+    exactPrefixContains(characterValues, 3, 13, 23);
+    exactPrefixContains(romanValues, 4, 14, 24);
+    if (foldedQuery) {
+      consider(33, foldedRomanValues.some(value => value === foldedQuery));
+      consider(34, foldedRomanValues.some(value => value.startsWith(foldedQuery)));
+      consider(35, foldedRomanValues.some(value => value.includes(foldedQuery)));
+    }
+  }
+
+  if (includesField('definition')) {
+    const definition = normalize(entry.latinDefinition);
+    const foldedDefinition = foldedSearch(entry.latinDefinition);
+    if (definition) {
+      consider(40, definition === query);
+      consider(41, definition.startsWith(query));
+      consider(42, definition.includes(query));
+      if (foldedQuery) consider(43, foldedDefinition.includes(foldedQuery));
+    }
+  }
+
+  if (includesField('glosses')) {
+    const values = (entry.glosses ?? []).filter(Boolean).map(value => normalize(value));
+    const foldedValues = (entry.glosses ?? []).filter(Boolean).map(foldedSearch);
+    exactPrefixContains(values, 44, 45, 46);
+    if (foldedQuery) consider(47, foldedValues.some(value => value.includes(foldedQuery)));
+  }
+
+  return best;
+}
+
+function matchingSearchEntries(entries: DictionarySearchEntry[], rawQuery: string, fields: SearchField[] = ['all']): DictionarySearchEntry[] {
+  const scored = entries
+    .map(entry => ({ entry, score: searchScore(entry, rawQuery, fields) }))
+    .filter((item): item is { entry: DictionarySearchEntry; score: number } => item.score != null)
+    .sort((a, b) => a.score - b.score
+      || a.entry.page - b.entry.page
+      || naturalCompare(a.entry.line, b.entry.line)
+      || naturalCompare(a.entry.romanization, b.entry.romanization));
+
+  // Relations in appendix rows can yield more than one lexical search entry for
+  // the same occurrence. Keep the best-scoring representative in the UI/export.
+  const seen = new Set<string>();
+  const deduped: DictionarySearchEntry[] = [];
+  for (const item of scored) {
+    const key = item.entry.occurrenceId == null
+      ? `${item.entry.page}|${item.entry.line ?? ''}|${item.entry.wordId ?? ''}`
+      : String(item.entry.occurrenceId);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(item.entry);
+  }
+  return deduped;
+}
+
+function searchDefinitionSnippet(entry: DictionarySearchEntry): string {
+  const value = text(entry.latinDefinition).replace(/\s+/g, ' ').trim();
+  if (!value) return '';
+  return value.length > 115 ? `${value.slice(0, 112)}…` : value;
 }
 
 function searchGlyph(entry: DictionarySearchEntry): string {
   return isPlaceholder(entry.character)
     ? `${entry.simplified || entry.character || '—'}*`
     : (entry.character || entry.simplified || '—');
+}
+
+function resultLocusKey(page: string | number | null | undefined, line: string | number | null | undefined): string {
+  return `${text(page)}|${text(line)}`;
+}
+
+function resultRecordTypologyRank(record: DictionaryExportRecord): number {
+  return typologyRank(record.typology);
+}
+
+function uniqueSearchRecords(records: DictionaryExportRecord[]): DictionaryExportRecord[] {
+  const seen = new Set<string>();
+  return records.filter(record => {
+    const key = String(record.occurrenceId);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).sort((a, b) => resultRecordTypologyRank(a) - resultRecordTypologyRank(b)
+    || naturalCompare(a.occurrenceId, b.occurrenceId));
+}
+
+function resultGraphicVariants(records: DictionaryExportRecord[]) {
+  const seen = new Set<string>();
+  return records.flatMap(record => record.graphicVariants ?? []).filter(item => {
+    const key = [item.character, item.simplified, normalize(item.status), item.glyphLink].map(text).join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function resultSynonyms(records: DictionaryExportRecord[]) {
+  const candidates = records.flatMap(record => record.synonyms ?? [])
+    .filter(item => item.internal !== false);
+  const positioned = candidates.filter(item => ['1', '2', '3', '4'].includes(text(item.position)));
+
+  if (positioned.length) {
+    const byPosition = new Map<string, typeof positioned>();
+    for (const item of positioned) {
+      const position = text(item.position);
+      const list = byPosition.get(position) ?? [];
+      list.push(item);
+      byPosition.set(position, list);
+    }
+    return Array.from(byPosition.entries())
+      .sort(([a], [b]) => naturalCompare(a, b))
+      .map(([, items]) => [...items].sort((a, b) => {
+        const assessment = synonymAssessmentRank(a.assessment) - synonymAssessmentRank(b.assessment);
+        if (assessment) return assessment;
+        return naturalCompare(a.romanisation, b.romanisation);
+      })[0]);
+  }
+
+  const seen = new Set<string>();
+  return candidates.filter(item => {
+    const key = [item.character, item.simplified, item.romanisation, normalize(item.assessment)].map(text).join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function SearchResultFolioRow({ result, onOpen }: { result: SearchResultRow; onOpen: () => void }) {
+  const records = uniqueSearchRecords(result.records);
+  const fallbackEntry = result.entries[0];
+  const primary = records.find(record => normalize(record.typology) === 'principale') ?? records[0] ?? null;
+  const secondaryReadings = records.filter(record => normalize(record.typology) === 'alternativa alla principale' && Boolean(record.romanisation));
+  const variants = records.filter(record => normalize(record.typology) === 'variante');
+  const hiddenDefinitionIds = new Set(
+    records
+      .filter(record => ['alternativa alla principale', 'alternativa alla variante'].includes(normalize(record.typology)))
+      .map(record => String(record.occurrenceId)),
+  );
+  const extraDefinitions = records.filter(record => {
+    if (primary && String(record.occurrenceId) === String(primary.occurrenceId)) return false;
+    if (hiddenDefinitionIds.has(String(record.occurrenceId))) return false;
+    if (normalize(record.typology) === 'variante') return false;
+    return Boolean(record.latinDefinition);
+  });
+  const graphics = resultGraphicVariants(records);
+  const synonyms = resultSynonyms(records);
+  const glosses = uniqueValues(records.flatMap(record => (record.glosses ?? []).map(item => item.value)));
+  const radical = records.map(record => record.historicalRadical).find(Boolean) || '';
+  const page = result.page;
+  const line = result.line;
+
+  const fallbackCharacter = fallbackEntry
+    ? (isPlaceholder(fallbackEntry.character)
+      ? `${fallbackEntry.simplified || fallbackEntry.character || '—'}*`
+      : (fallbackEntry.character || fallbackEntry.simplified || '—'))
+    : '—';
+  const antonym = records.flatMap(record => record.antonyms ?? [])[0];
+  const compound = records.flatMap(record => record.compounds ?? [])[0];
+  const relatedCharacterFallback = antonym
+    ? `${antonym.leftCharacter || '—'} ↔ ${antonym.rightCharacter || '—'}`
+    : compound ? `${compound.firstCharacter || '—'} + ${compound.secondCharacter || '—'}` : fallbackCharacter;
+  const relatedReadingFallback = antonym
+    ? `${antonym.leftRomanisation || '—'} ↔ ${antonym.rightRomanisation || '—'}`
+    : compound ? `${compound.firstRomanisation || '—'} + ${compound.secondRomanisation || '—'}` : null;
+  const primaryCharacter = primary
+    ? glyphDisplay(primary.character, primary.simplified, primary.glyphLink)
+    : fallbackEntry
+      ? glyphDisplay(fallbackEntry.character, fallbackEntry.simplified, fallbackEntry.glyphLink)
+      : relatedCharacterFallback;
+  const primaryReading = primary?.romanisation || primary?.modernRomanisation || primary?.simpleRomanisation
+    || fallbackEntry?.romanization || fallbackEntry?.modernRomanization || fallbackEntry?.simpleRomanization
+    || relatedReadingFallback || primary?.typology || fallbackEntry?.typology || '—';
+
+  return (
+    <article
+      className="dsl-entry dsl-search-table-row"
+      role="link"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+      title={`Open page ${page}${line != null && text(line) ? `, line ${line}` : ''}`}
+    >
+      <div className="dsl-cell dsl-search-locus-cell">
+        <strong>p. {page}</strong>
+        <span>{line != null && text(line) ? `l. ${line}` : '—'}</span>
+      </div>
+      <div className="dsl-cell dsl-search-radical-cell">
+        {radical ? <strong className="dsl-search-radical">{radical}</strong> : <span className="dsl-muted">—</span>}
+      </div>
+      <div className="dsl-cell dsl-lexeme dsl-search-lexeme">
+        <span className="dsl-main-char">{primaryCharacter}</span>
+        <div className="dsl-reading-stack">
+          <em className="dsl-main-reading">{primaryReading}</em>
+          {secondaryReadings.map(record => (
+            <div className="dsl-secondary-reading" key={String(record.occurrenceId)}>
+              <span aria-hidden="true" />
+              <em>{record.romanisation}</em>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="dsl-cell dsl-definition dsl-search-definition">
+        {primary?.latinDefinition ? (
+          <div className={variants.some(record => Boolean(record.latinDefinition)) ? 'dsl-main-definition with-variants' : 'dsl-main-definition'}>
+            {variants.some(record => Boolean(record.latinDefinition)) ? <span className="dsl-definition-label">Main definition</span> : null}
+            <DefinitionHtml html={primary.latinDefinition} />
+          </div>
+        ) : fallbackEntry?.latinDefinition ? <DefinitionHtml html={fallbackEntry.latinDefinition} /> : null}
+        {variants.map(record => record.latinDefinition ? (
+          <div className="dsl-def-block dsl-variant-definition" key={String(record.occurrenceId)}>
+            <div className="dsl-def-type">
+              <span>(Variant)</span>
+              {record.romanisation ? <b>{record.romanisation}</b> : null}
+            </div>
+            <div className="dsl-def-copy"><DefinitionHtml html={record.latinDefinition} /></div>
+          </div>
+        ) : null)}
+        {extraDefinitions.map(record => (
+          <div className="dsl-def-block" key={String(record.occurrenceId)}>
+            <div className="dsl-def-type">
+              <span>({englishTypologyLabel(record.typology)})</span>
+              {record.romanisation ? <b>{record.romanisation}</b> : null}
+            </div>
+            <div className="dsl-def-copy"><DefinitionHtml html={record.latinDefinition} /></div>
+          </div>
+        ))}
+        {!primary?.latinDefinition && !fallbackEntry?.latinDefinition && !variants.some(record => Boolean(record.latinDefinition)) && !extraDefinitions.length ? (
+          <span className="dsl-muted">—</span>
+        ) : null}
+      </div>
+      <div className="dsl-cell dsl-gloss dsl-search-gloss">
+        {glosses.length ? glosses.map(value => <span key={value}><GlossText value={value} /></span>) : <span className="dsl-muted">—</span>}
+      </div>
+      <div className="dsl-cell dsl-graphic dsl-search-relations">
+        {graphics.length ? graphics.map((item, index) => (
+          <span className="dsl-search-relation-token" key={`${item.character || item.simplified || 'variant'}-${index}`}>
+            {glyphLabel(item.character, item.simplified)}{isPlaceholder(item.character) ? <sup>*</sup> : null}
+          </span>
+        )) : <span className="dsl-muted">—</span>}
+      </div>
+      <div className="dsl-cell dsl-synonyms dsl-search-relations">
+        {synonyms.length ? synonyms.map((item, index) => (
+          <span className="dsl-search-relation-token" key={`${item.character || item.simplified || 'synonym'}-${item.position ?? index}`}>
+            {glyphLabel(item.character, item.simplified)}{isPlaceholder(item.character) ? <sup>*</sup> : null}
+            {item.romanisation ? <em>{item.romanisation}</em> : null}
+          </span>
+        )) : <span className="dsl-muted">—</span>}
+      </div>
+    </article>
+  );
 }
 
 function primaryOccurrence(group: LineGroup): DictionaryPageOccurrence | undefined {
@@ -819,6 +1163,16 @@ export default function DictionaryPageBrowser() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchFieldsOpen, setSearchFieldsOpen] = useState(false);
+  const [searchFields, setSearchFields] = useState<SearchField[]>(['all']);
+  const searchFieldsRef = useRef<HTMLDivElement | null>(null);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [searchResultsView, setSearchResultsView] = useState(false);
+  const [searchResultRows, setSearchResultRows] = useState<SearchResultRow[]>([]);
+  const [searchResultsLoading, setSearchResultsLoading] = useState(false);
+  const [searchResultsError, setSearchResultsError] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [historicalStrokesFilter, setHistoricalStrokesFilter] = useState('');
   const [modernStrokesFilter, setModernStrokesFilter] = useState('');
@@ -827,6 +1181,19 @@ export default function DictionaryPageBrowser() {
   const [activeLine, setActiveLine] = useState<string>('');
   const [locationReady, setLocationReady] = useState(false);
   const deferredQuery = useDeferredValue(query.trim());
+
+  useEffect(() => {
+    if (!searchFieldsOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (target && searchFieldsRef.current?.contains(target)) return;
+      setSearchFieldsOpen(false);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [searchFieldsOpen]);
 
   useEffect(() => {
     const initial = pageFromLocation();
@@ -906,6 +1273,11 @@ export default function DictionaryPageBrowser() {
   }, [requestedPage]);
 
   useEffect(() => {
+    setExportError(null);
+    setExportMenuOpen(false);
+  }, [deferredQuery, historicalStrokesFilter, modernStrokesFilter, typologyFilter]);
+
+  useEffect(() => {
     if (!deferredQuery || searchIndex) return;
     let active = true;
     setSearchLoading(true);
@@ -948,17 +1320,29 @@ export default function DictionaryPageBrowser() {
     });
   }, [groups, historicalStrokesFilter, modernStrokesFilter, typologyFilter, isCompositePage]);
 
-  const searchMatches = useMemo(() => {
-    if (!deferredQuery || !searchIndex) return { total: 0, entries: [] as DictionarySearchEntry[] };
-    const scored = searchIndex.entries
-      .map(entry => ({ entry, score: searchScore(entry, deferredQuery) }))
-      .filter((item): item is { entry: DictionarySearchEntry; score: number } => item.score != null)
-      .sort((a, b) => a.score - b.score
-        || a.entry.page - b.entry.page
-        || naturalCompare(a.entry.line, b.entry.line)
-        || naturalCompare(a.entry.romanization, b.entry.romanization));
-    return { total: scored.length, entries: scored.slice(0, 30).map(item => item.entry) };
-  }, [deferredQuery, searchIndex]);
+  const allSearchMatches = useMemo(() => {
+    if (!deferredQuery || !searchIndex) return [] as DictionarySearchEntry[];
+    return matchingSearchEntries(searchIndex.entries, deferredQuery, searchFields);
+  }, [deferredQuery, searchIndex, searchFields]);
+
+  const searchMatches = useMemo(() => ({
+    total: allSearchMatches.length,
+    entries: allSearchMatches.slice(0, 30),
+  }), [allSearchMatches]);
+
+  const hasLocalFilters = Boolean(historicalStrokesFilter || modernStrokesFilter || typologyFilter);
+  const hasScopedSearchFields = !searchFields.includes('all');
+  const hasExportableFilter = Boolean(deferredQuery || hasLocalFilters);
+  const searchFieldButtonLabel = searchFields.includes('all')
+    ? 'ALL FIELDS'
+    : searchFields.length === 1
+      ? (SEARCH_FIELD_OPTIONS.find(option => option.value === searchFields[0])?.label.toUpperCase() || '1 FIELD')
+      : `${searchFields.length} FIELDS`;
+  const searchPlaceholder = searchFields.includes('all')
+    ? 'Search all dictionary fields…'
+    : searchFields.length === 1
+      ? `Search ${SEARCH_FIELD_OPTIONS.find(option => option.value === searchFields[0])?.label.toLocaleLowerCase() || 'field'}…`
+      : 'Search selected fields…';
 
   const pageMeta = useMemo(() => {
     const source = payload?.data ?? [];
@@ -994,6 +1378,10 @@ export default function DictionaryPageBrowser() {
     window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`);
     setQuery('');
     setSearchOpen(false);
+    setSearchFieldsOpen(false);
+    setSearchResultsView(false);
+    setSearchResultRows([]);
+    setSearchResultsError(null);
 
     if (next !== requestedPage) {
       setRequestedPage(next);
@@ -1008,6 +1396,124 @@ export default function DictionaryPageBrowser() {
         document.getElementById(targetId)
           ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 0);
+    }
+  }
+
+  async function openSearchResultsView() {
+    if (!deferredQuery || searchResultsLoading) return;
+    setSearchOpen(false);
+    setSearchResultsView(true);
+    setSearchResultsLoading(true);
+    setSearchResultsError(null);
+
+    try {
+      const index = searchIndex ?? await fetchSearchIndex();
+      if (!searchIndex) setSearchIndex(index);
+      const matches = matchingSearchEntries(index.entries, deferredQuery, searchFields);
+      const exportPayload = await fetchExportIndex();
+      const recordById = new Map(exportPayload.records.map(record => [String(record.occurrenceId), record] as const));
+      const recordsByLocus = new Map<string, DictionaryExportRecord[]>();
+      for (const record of exportPayload.records) {
+        const page = Number(record.page);
+        if (!Number.isFinite(page) || page < 1) continue;
+        const key = resultLocusKey(Math.trunc(page), record.line);
+        const list = recordsByLocus.get(key) ?? [];
+        list.push(record);
+        recordsByLocus.set(key, list);
+      }
+
+      const grouped = new Map<string, SearchResultRow>();
+      for (const entry of matches) {
+        const key = resultLocusKey(entry.page, entry.line);
+        const current = grouped.get(key) ?? {
+          page: entry.page,
+          line: entry.line,
+          entries: [],
+          records: [...(recordsByLocus.get(key) ?? [])],
+        };
+        current.entries.push(entry);
+        if (entry.occurrenceId != null) {
+          const matchedRecord = recordById.get(String(entry.occurrenceId));
+          if (matchedRecord && !current.records.some(record => String(record.occurrenceId) === String(matchedRecord.occurrenceId))) {
+            current.records.push(matchedRecord);
+          }
+        }
+        grouped.set(key, current);
+      }
+
+      setSearchResultRows(Array.from(grouped.values()).sort((a, b) => a.page - b.page
+        || naturalCompare(a.line, b.line)));
+    } catch (err) {
+      setSearchResultRows([]);
+      setSearchResultsError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSearchResultsLoading(false);
+    }
+  }
+
+  function toggleSearchField(field: SearchField) {
+    setSearchFields(current => {
+      if (field === 'all') return ['all'];
+      const scoped = current.filter(item => item !== 'all');
+      const next = scoped.includes(field)
+        ? scoped.filter(item => item !== field)
+        : [...scoped, field];
+      return next.length ? next : ['all'];
+    });
+    setSearchResultsView(false);
+    setSearchResultRows([]);
+    setSearchResultsError(null);
+  }
+
+  function resetDictionaryView() {
+    setQuery('');
+    setSearchOpen(false);
+    setSearchFieldsOpen(false);
+    setSearchFields(['all']);
+    setSearchResultsView(false);
+    setSearchResultRows([]);
+    setSearchResultsError(null);
+    setHistoricalStrokesFilter('');
+    setModernStrokesFilter('');
+    setTypologyFilter('');
+    setFiltersOpen(false);
+    setExportMenuOpen(false);
+    setExportError(null);
+  }
+
+  async function exportFilteredResults(format: ExportFormat) {
+    if (!hasExportableFilter || exportLoading) return;
+    setExportMenuOpen(false);
+    setExportLoading(true);
+    setExportError(null);
+
+    try {
+      const exportPayload = await fetchExportIndex();
+      let selectedIds = new Set<string>();
+      let label = `page_${requestedPage}_filters`;
+
+      if (deferredQuery) {
+        const index = searchIndex ?? await fetchSearchIndex();
+        selectedIds = new Set(
+          matchingSearchEntries(index.entries, deferredQuery, searchFields)
+            .map(entry => entry.occurrenceId == null ? '' : String(entry.occurrenceId))
+            .filter(Boolean),
+        );
+        label = `search_${deferredQuery}`;
+      } else {
+        selectedIds = new Set(
+          visibleGroups.flatMap(group => group.occurrences.map(row => String(row.id))),
+        );
+      }
+
+      const records = exportPayload.records.filter(record => selectedIds.has(String(record.occurrenceId)));
+      if (!records.length) throw new Error('The active filter does not contain exportable dictionary rows.');
+
+      downloadDictionaryExport(records, format, window.location.href, label);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setExportLoading(false);
     }
   }
 
@@ -1030,7 +1536,7 @@ export default function DictionaryPageBrowser() {
   const maxPage = payload?.maxPage ?? null;
 
   return (
-    <div className={`dsl-app ${isAntinomyPage ? 'dsl-mode-antinomy' : ''} ${isCompositePage ? 'dsl-mode-compounds' : ''} ${isParticulaePage ? 'dsl-mode-numerales' : ''}`}>
+    <div className={`dsl-app ${isAntinomyPage ? 'dsl-mode-antinomy' : ''} ${isCompositePage ? 'dsl-mode-compounds' : ''} ${isParticulaePage ? 'dsl-mode-numerales' : ''} ${searchResultsView ? 'dsl-results-mode' : ''}`}>
       <div className="dsl-page-toolbar" aria-label="Dictionary page controls">
         <div className="dsl-page-tools">
           <form className="dsl-page-label dsl-page-jump" onSubmit={submitPageJump} title="Type a page number and press Enter">
@@ -1061,16 +1567,65 @@ export default function DictionaryPageBrowser() {
             disabled={Boolean(maxPage && requestedPage >= maxPage) || loading}
             aria-label="Next dictionary page"
           >›</button>
-          <div className="dsl-search-wrap">
-            <label className="dsl-search">
+          <div className="dsl-search-cluster">
+            <div
+              ref={searchFieldsRef}
+              className="dsl-search-field-select"
+            >
+              <button
+                type="button"
+                className={`dsl-search-field-button ${searchFieldsOpen ? 'open' : ''}`}
+                onClick={() => {
+                  setSearchOpen(false);
+                  setSearchFieldsOpen(value => !value);
+                }}
+                aria-haspopup="true"
+                aria-expanded={searchFieldsOpen}
+                title="Choose which dictionary fields to search"
+              >
+                <span>{searchFieldButtonLabel}</span>
+                <span className="dsl-search-field-caret" aria-hidden="true">⌄</span>
+              </button>
+              {searchFieldsOpen ? (
+                <div className="dsl-search-field-menu" role="group" aria-label="Search fields">
+                  {SEARCH_FIELD_OPTIONS.map(option => {
+                    const checked = option.value === 'all'
+                      ? searchFields.includes('all')
+                      : searchFields.includes(option.value);
+                    return (
+                      <label className={`dsl-search-field-option ${checked ? 'checked' : ''}`} key={option.value}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleSearchField(option.value)}
+                        />
+                        <span className="dsl-search-field-check" aria-hidden="true">{checked ? '✓' : ''}</span>
+                        <span>{option.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+            <div className="dsl-search-wrap">
+              <label className="dsl-search">
               <span aria-hidden="true">⌕</span>
               <input
                 value={query}
-                onChange={event => { setQuery(event.target.value); setSearchOpen(true); }}
-                onFocus={() => { if (query.trim()) setSearchOpen(true); }}
+                onChange={event => {
+                  setQuery(event.target.value);
+                  setSearchOpen(true);
+                  setSearchResultsView(false);
+                  setSearchResultRows([]);
+                  setSearchResultsError(null);
+                }}
+                onFocus={() => {
+                  setSearchFieldsOpen(false);
+                  if (query.trim()) setSearchOpen(true);
+                }}
                 onBlur={() => window.setTimeout(() => setSearchOpen(false), 140)}
-                placeholder="Search character or romanisation…"
-                aria-label="Search characters and romanisations across the whole dictionary"
+                placeholder={searchPlaceholder}
+                aria-label="Search the selected dictionary fields across the whole dictionary"
                 aria-expanded={Boolean(searchOpen && deferredQuery)}
                 aria-controls="dsl-global-search-results"
                 autoComplete="off"
@@ -1080,12 +1635,26 @@ export default function DictionaryPageBrowser() {
               <div className="dsl-search-results" id="dsl-global-search-results" role="listbox">
                 <div className="dsl-search-results-head">
                   <span>ALL PAGES</span>
-                  {!searchLoading && !searchError && searchIndex ? <small>{searchMatches.total} matches</small> : null}
+                  {!searchLoading && !searchError && searchIndex ? (
+                    <div className="dsl-search-results-head-actions">
+                      <small>{searchMatches.total} matches</small>
+                      {searchMatches.total > 0 ? (
+                        <button
+                          type="button"
+                          className="dsl-search-view-all"
+                          onMouseDown={event => event.preventDefault()}
+                          onClick={() => void openSearchResultsView()}
+                        >
+                          VIEW ROWS
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
                 {searchLoading ? <div className="dsl-search-state">Loading dictionary index…</div> : null}
                 {searchError ? <div className="dsl-search-state error">{searchError}</div> : null}
                 {!searchLoading && !searchError && searchIndex && searchMatches.entries.length === 0 ? (
-                  <div className="dsl-search-state">No matching character or romanisation.</div>
+                  <div className="dsl-search-state">No matches in the selected search fields.</div>
                 ) : null}
                 {!searchLoading && !searchError ? searchMatches.entries.map((entry, index) => (
                   <button
@@ -1097,7 +1666,8 @@ export default function DictionaryPageBrowser() {
                     onClick={() => navigateToLocus(entry.page, entry.line)}
                   >
                     <strong>{searchGlyph(entry)}</strong>
-                    <span className="dsl-search-result-reading">{entry.romanization || entry.modernRomanization || entry.simpleRomanization || '—'}</span>
+                    <span className="dsl-search-result-reading">{entry.romanization || entry.modernRomanization || entry.simpleRomanization || entry.typology || '—'}</span>
+                    <span className="dsl-search-result-definition">{searchDefinitionSnippet(entry)}</span>
                     <span className="dsl-search-result-locus">p. {entry.page}{entry.line != null && text(entry.line) ? ` · l. ${entry.line}` : ''}</span>
                   </button>
                 )) : null}
@@ -1106,7 +1676,41 @@ export default function DictionaryPageBrowser() {
                 ) : null}
               </div>
             ) : null}
+            </div>
           </div>
+          {hasExportableFilter ? (
+            <div className="dsl-export-wrap">
+              <button
+                type="button"
+                className={`dsl-export-button ${exportMenuOpen ? 'open' : ''}`}
+                onClick={() => setExportMenuOpen(value => !value)}
+                disabled={exportLoading}
+                title="Download the active filtered result"
+                aria-haspopup="menu"
+                aria-expanded={exportMenuOpen}
+              >
+                <span aria-hidden="true">⇩</span>{exportLoading ? 'PREPARING…' : 'DOWNLOAD'}
+              </button>
+              {exportMenuOpen ? (
+                <div className="dsl-export-menu" role="menu">
+                  <button type="button" role="menuitem" onClick={() => void exportFilteredResults('json')}>JSON <small>structured</small></button>
+                  <button type="button" role="menuitem" onClick={() => void exportFilteredResults('csv')}>CSV <small>UTF-8</small></button>
+                  <button type="button" role="menuitem" onClick={() => void exportFilteredResults('xlsx')}>XLSX <small>Excel</small></button>
+                </div>
+              ) : null}
+              {exportError ? <div className="dsl-export-error" role="alert">{exportError}</div> : null}
+            </div>
+          ) : null}
+          {hasExportableFilter || searchResultsView || hasScopedSearchFields ? (
+            <button
+              type="button"
+              className="dsl-reset-button"
+              onClick={resetDictionaryView}
+              title="Clear search and filters and return to the normal page view"
+            >
+              <span aria-hidden="true">↺</span>RESET
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -1267,8 +1871,18 @@ export default function DictionaryPageBrowser() {
         </aside>
 
         <main className="dsl-folio" aria-busy={loading}>
-          <div className={`dsl-folio-head ${isAntinomyPage ? 'dsl-ant-head' : ''} ${isCompositePage ? 'dsl-comp-head' : ''} ${isParticulaePage ? 'dsl-num-head' : ''}`}>
-            {isAntinomyPage ? (
+          <div className={`dsl-folio-head ${searchResultsView ? 'dsl-search-results-head-row' : ''} ${isAntinomyPage ? 'dsl-ant-head' : ''} ${isCompositePage ? 'dsl-comp-head' : ''} ${isParticulaePage ? 'dsl-num-head' : ''}`}>
+            {searchResultsView ? (
+              <>
+                <div>PAGE / LINE</div>
+                <div>RADICAL</div>
+                <div>CHARACTER</div>
+                <div>DEFINITION(S)</div>
+                <div>GLOSSES</div>
+                <div>GRAPHIC<br />VARIANTS</div>
+                <div>SYNONYMS</div>
+              </>
+            ) : isAntinomyPage ? (
               <>
                 <div>CHARACTER</div>
                 <div>CHARACTER</div>
@@ -1295,6 +1909,23 @@ export default function DictionaryPageBrowser() {
           </div>
 
           <div className="dsl-folio-body">
+            {searchResultsView ? (
+              <>
+                {searchResultsLoading ? <div className="dsl-loading"><span /> Loading all matching rows…</div> : null}
+                {searchResultsError ? <div className="dsl-message dsl-error">{searchResultsError}</div> : null}
+                {!searchResultsLoading && !searchResultsError && searchResultRows.length === 0 ? (
+                  <div className="dsl-message">No matching rows for “{deferredQuery}”.</div>
+                ) : null}
+                {!searchResultsLoading && !searchResultsError ? searchResultRows.map((result, index) => (
+                  <SearchResultFolioRow
+                    key={`${result.page}-${result.line ?? ''}-${index}`}
+                    result={result}
+                    onOpen={() => navigateToLocus(result.page, result.line)}
+                  />
+                )) : null}
+              </>
+            ) : (
+              <>
             {error && <div className="dsl-message dsl-error">{error}</div>}
             {!error && payload?.warnings?.length ? (
               <details className="dsl-warning">
@@ -1566,11 +2197,22 @@ export default function DictionaryPageBrowser() {
             )}
 
             {loading && <div className="dsl-loading"><span /> Loading page {requestedPage}…</div>}
+              </>
+            )}
           </div>
 
           <footer className="dsl-folio-foot">
-            <span>{payload ? `${payload.count} occurrences · ${payload.lineCount} printed lines` : 'Dictionary page'}</span>
-            <span>{isAntinomyPage ? 'antinomy appendix reconstruction' : isCompositePage ? 'compound appendix reconstruction' : isParticulaePage ? 'particulae numerales appendix reconstruction' : 'page-by-page Directus reconstruction'}</span>
+            {searchResultsView ? (
+              <>
+                <span>{searchResultRows.length} matching rows · query “{deferredQuery}”</span>
+                <span>cross-page search results · click a row to open its locus</span>
+              </>
+            ) : (
+              <>
+                <span>{payload ? `${payload.count} occurrences · ${payload.lineCount} printed lines` : 'Dictionary page'}</span>
+                <span>{isAntinomyPage ? 'antinomy appendix reconstruction' : isCompositePage ? 'compound appendix reconstruction' : isParticulaePage ? 'particulae numerales appendix reconstruction' : 'page-by-page Directus reconstruction'}</span>
+              </>
+            )}
           </footer>
         </main>
 
